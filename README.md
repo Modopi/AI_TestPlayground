@@ -214,7 +214,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | 파일 | 내용 |
 |------|------|
 | `01_cnn_basics.ipynb` | 합성곱 원리·시각화, Padding/Stride, Pooling, 특징 맵 시각화 |
-| `02_cnn_architectures.ipynb` | LeNet → VGG → ResNet (Skip Connection), `tf.keras.applications` |
+| `02_cnn_architectures.ipynb` | LeNet → VGG → ResNet (Skip Connection) → ConvNeXt, `tf.keras.applications` |
 | `03_transfer_learning.ipynb` | Feature Extraction vs Fine-Tuning, 단계별 동결 해제 |
 | `04_object_detection_intro.ipynb` | 분류/탐지/분할 개념, IoU/mAP, TF Hub 추론 예시 |
 
@@ -222,9 +222,9 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | 파일 | 내용 |
 |------|------|
 | `practice/ex01_cifar10_classifier.ipynb` | CIFAR-10 CNN 구현, 학습 곡선 시각화 |
-| `practice/ex02_transfer_learning_flowers.ipynb` | Flowers 데이터셋, EfficientNetB0 전이학습 |
+| `practice/ex02_transfer_learning_flowers.ipynb` | Flowers 데이터셋, **EfficientNetV2** 전이학습 _(구버전 EfficientNetB0 대체; 2026-02-25 기준)_ |
 
-**주요 키워드**: `Conv2D`, `MaxPooling2D`, `GlobalAveragePooling2D`, `tf.keras.applications`, `layer.trainable`
+**주요 키워드**: `Conv2D`, `MaxPooling2D`, `GlobalAveragePooling2D`, `tf.keras.applications`, `EfficientNetV2`, `ConvNeXt`, `layer.trainable`
 
 ---
 
@@ -290,7 +290,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 |------|------|
 | `01_attention_mechanism.ipynb` | Bahdanau Attention, Self-Attention, Attention Weight 시각화 |
 | `02_transformer_basics.ipynb` | Positional Encoding, Encoder/Decoder Block 구현 |
-| `03_bert_fine_tuning.ipynb` | BERT 사전학습 목표, HuggingFace + TF 백엔드, 한국어 BERT Fine-Tuning |
+| `03_bert_fine_tuning.ipynb` | BERT 사전학습 목표, **KerasHub** (`keras_hub.models.BertClassifier`) + 한국어 BERT Fine-Tuning _(HuggingFace TF 백엔드는 2025년 9월 deprecated → KerasHub 전환 권장; 2026-02-25 기준)_ |
 | `04_generative_models_vae.ipynb` | Autoencoder → VAE, 재파라미터화 트릭, MNIST 생성 |
 | `05_generative_models_gan.ipynb` | DCGAN 구현, Wasserstein Loss, 생성 이미지 시각화 |
 
@@ -300,7 +300,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | `practice/ex01_transformer_text_classification.ipynb` | Transformer Encoder로 텍스트 분류 |
 | `practice/ex02_simple_gan.ipynb` | 간단한 GAN으로 손글씨 이미지 생성 |
 
-**주요 키워드**: `MultiHeadAttention`, `LayerNormalization`, `transformers`, `VAE`, `GAN`
+**주요 키워드**: `MultiHeadAttention`, `LayerNormalization`, `KerasHub`, `keras_hub`, `VAE`, `GAN`
 
 ---
 
@@ -356,7 +356,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | `01_distributed_training_basics.ipynb` | Data Parallelism(DP), DistributedDataParallel(DDP), 통신 토폴로지(All-Reduce/All-Gather) |
 | `02_tensor_parallelism.ipynb` | Megatron-LM 방식의 1D 텐서 병렬화, Column/Row 병렬 Linear 레이어 구현 |
 | `03_pipeline_parallelism.ipynb` | 마이크로배치 분할, Gpipe 및 1F1B 스케줄링 기법을 통한 파이프라인 병렬화 |
-| `04_3d_parallelism.ipynb` | DP + TP + PP를 결합한 3D 병렬 처리 (Megatron-Turing NLG 아키텍처 리뷰) |
+| `04_3d_parallelism.ipynb` | DP + TP + PP를 결합한 3D 병렬 처리 (**Megatron-Core** 기반 아키텍처 리뷰 _(구버전 Megatron-Turing NLG 530B는 2021년 모델 → 현행 Megatron-Core로 교체; 2026-02-25 기준)_) |
 
 **실습 파일**
 | 파일 | 내용 |
@@ -364,7 +364,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | `practice/ex01_implement_ddp_scratch.ipynb` | NCCL 백엔드를 모사하여 단순 파이썬으로 Ring All-Reduce 로직 구현 |
 | `practice/ex02_1d_tensor_parallel_llm.ipynb` | 소형 Transformer 모델의 가중치를 2개의 GPU로 분리하여 Forward Pass 계산 후 검증 |
 
-**주요 키워드**: `All-Reduce`, `Megatron-LM`, `Tensor Parallelism`, `Pipeline Parallelism`, `Microbatch`
+**주요 키워드**: `All-Reduce`, `Megatron-Core`, `Megatron-LM`, `Tensor Parallelism`, `Pipeline Parallelism`, `Microbatch`
 
 ---
 
@@ -409,6 +409,12 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 - 파이썬 프레임워크의 오버헤드를 줄이고 텐서 코어를 최대로 활용하기 위해 사용자 정의 커널을 직접 개발하고 적용한다.
 
+> **📅 라이브러리·하드웨어 버전 기준 (2026-02-25)**
+>
+> - **CUDA Toolkit**: 13.1.1 (2026년 1월 출시, NVIDIA 공식 최신 안정 버전)
+> - **OpenAI Triton**: 3.6.0 (2026년 1월 20일 출시, Blackwell 아키텍처 지원)
+> - **GPU 세대**: H100(Hopper) → **H200**(HBM3e 141GB, 4.8TB/s) → **B200/Blackwell**(HBM3e 192GB, 8TB/s, FP4 지원)
+
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
@@ -419,18 +425,18 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_gpu_architecture_basics.ipynb` | Streaming Multiprocessor(SM), Warp, Global/Shared/레지스터 메모리 계층 이해 |
-| `02_cuda_cpp_extensions.ipynb` | C++과 pybind11을 활용하여 PyTorch/TensorFlow에 커스텀 C++(CUDA) 연산 연동 |
-| `03_triton_kernel_programming.ipynb` | 파이썬 문법으로 GPU 커널 작성하기: Triton의 블록 포인터와 타일 매핑 |
+| `01_gpu_architecture_basics.ipynb` | SM·Warp·메모리 계층; H100/H200/B200(Blackwell) 세대별 스펙 비교 및 Roofline 분석 |
+| `02_cuda_cpp_extensions.ipynb` | C++과 pybind11을 활용하여 PyTorch/TensorFlow에 커스텀 C++(CUDA 13.x) 연산 연동 |
+| `03_triton_kernel_programming.ipynb` | Triton 3.x 문법으로 GPU 커널 작성: 블록 포인터·타일 매핑·Blackwell FP4 지원 개요 |
 | `04_kernel_profiling_and_fusion.ipynb` | Nsight Systems 및 프로파일러 활용, 여러 연산을 묶는 Kernel Fusion 전략 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
 | `practice/ex01_vector_add_cuda.ipynb` | 벡터 덧셈 연산을 순수 CUDA C++ 커널로 작성하고 파이썬에서 호출 |
-| `practice/ex02_triton_fused_softmax_dropout.ipynb` | Triton을 이용하여 Softmax와 Dropout 연산을 하나의 커널로 퓨전하여 속도 측정 |
+| `practice/ex02_triton_fused_softmax_dropout.ipynb` | Triton 3.x로 Softmax와 Dropout 연산을 하나의 커널로 퓨전하여 속도 측정 |
 
-**주요 키워드**: `CUDA`, `Triton`, `Kernel Fusion`, `Shared Memory`, `Arithmetic Intensity`
+**주요 키워드**: `CUDA 13.x`, `Triton 3.x`, `Kernel Fusion`, `Shared Memory`, `Arithmetic Intensity`, `H200`, `Blackwell B200`
 
 ---
 
