@@ -440,7 +440,7 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- Llama-3, GPT-4 등 최신 SOTA 모델에 적용된 Attention 변형과 정규화 기법의 수학적 배경을 이해하고 거대 모델(MoE 포함)을 밑바닥부터 작성한다.
+- Llama-3, GPT-4 등 최신 SOTA 모델에 적용된 Attention 변형과 정규화 기법의 수학적 배경을 이해하고, KV Cache·GQA·MoE를 포함한 거대 모델 아키텍처를 밑바닥부터 작성한다.
 
 **수학적 기초**
 | 개념 | 수식 |
@@ -448,23 +448,26 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 | RMSNorm | $\bar{a}_i = \frac{a_i}{\sqrt{\frac{1}{n}\sum_{j=1}^n a_j^2 + \epsilon}} g_i$ |
 | RoPE (Rotary PE) | $f(q, m) = (q_1\cos(m\theta) - q_2\sin(m\theta), q_2\cos(m\theta) + q_1\sin(m\theta), \dots)$ |
 | SwiGLU | $\text{SwiGLU}(x) = \text{Swish}(xW) \otimes (xV)$ |
-| MoE Router Loss | $L_{aux} = \alpha \cdot N \sum_{i=1}^N f_i \cdot P_i$ (Load Balancing을 위한 보조 손실) |
+| GQA KV 절감 | $\text{KV Heads} = G \ll H_Q$, 파라미터 절감률 $= 1 - G/H_Q$ |
+| KV Cache 크기 | $M_{KV} = 2 \times L \times H_{kv} \times d_{head} \times B \times S_{max} \times \text{bytes}$ |
+| MoE Router Loss | $L_{aux} = \alpha \cdot N \sum_{i=1}^N f_i \cdot P_i$ (부하 균형을 위한 보조 손실) |
 
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_llama_architecture_deepdive.ipynb` | 기존 Transformer와의 차이: RMSNorm, SwiGLU, KV-Cache 최적화 |
-| `02_rotary_position_embedding.ipynb` | 절대좌표와 상대좌표의 결합: RoPE의 복소수 평면 공간 증명 및 구현 |
-| `03_gqa_and_multi_query_attention.ipynb` | MHA -> MQA -> GQA 진화 과정 및 Q, K, V 헤드 비율에 따른 효율 비교 |
-| `04_mixture_of_experts_moe.ipynb` | Expert 라우팅 메커니즘, Top-k 선택, 활성화 희소성(Sparsity) 제어 |
+| `01_llama_architecture_deepdive.ipynb` | Pre-Norm + RMSNorm · SwiGLU 수식; **GQA 포함**: MHA→MQA→GQA 진화와 Q·K·V 헤드 비율에 따른 메모리·속도 비교 |
+| `02_kv_cache_and_memory.ipynb` | **[신설]** KV Cache 크기 공식, Rolling Buffer, Multi-Turn 대화의 메모리 증가 패턴, Prefix Caching 개요 |
+| `03_rotary_position_embedding.ipynb` | 복소수 평면에서의 RoPE 수식 도출, 장거리 의존성 보존 증명, YaRN / LongRoPE로 컨텍스트 창 확장하는 원리 |
+| `04_moe_routing_and_load_balancing.ipynb` | Top-k 라우터 수식, Softmax 게이팅 vs Linear 게이팅, Auxiliary Loss 도출, Expert Capacity Factor |
+| `05_deepseek_moe_architecture.ipynb` | **[신설]** DeepSeekMoE: Shared Expert + Routed Expert 분리 설계, Multi-Token Prediction(MTP) 수식, Auxiliary-Loss-Free 로드밸런싱 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_implement_llama_scratch.ipynb` | RoPE와 SwiGLU를 적용한 소형 Llama 모델을 모듈별로 직접 작성하기 |
-| `practice/ex02_custom_moe_layer.ipynb` | 4개의 Expert 중 상위 2개(Top-2)를 선택하고 보조 손실을 계산하는 커스텀 레이어 작성 |
+| `practice/ex01_implement_llama_scratch.ipynb` | RMSNorm · RoPE · SwiGLU · GQA를 적용한 소형 Llama 모델 블록을 모듈별로 직접 작성하기 |
+| `practice/ex02_custom_moe_layer.ipynb` | Shared Expert 1개 + Routed Expert 4개 중 Top-2를 선택하는 DeepSeekMoE 스타일 레이어 구현 |
 
-**주요 키워드**: `RoPE`, `SwiGLU`, `RMSNorm`, `GQA`, `MoE`, `Load Balancing Loss`
+**주요 키워드**: `RoPE`, `YaRN`, `SwiGLU`, `RMSNorm`, `GQA`, `KV Cache`, `MoE`, `Load Balancing Loss`, `DeepSeekMoE`, `MTP`
 
 ---
 
@@ -474,31 +477,34 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- 확산 모델이 어떻게 순수한 수학적 노이즈 확률 변환에서 시작되는지 이해하고 (DDPM 모델), 시간 연속형 확률 미분 방정식(SDE)에 기반한 최신 모델들을 다룬다.
+- 확산 모델이 어떻게 수학적 노이즈 확률 변환에서 시작되는지 이해하고(DDPM), 노이즈 스케줄·고속 샘플러·CFG·Score Matching·SDE까지 딥러닝 생성 모델의 전 이론 체계를 다룬다.
 
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
 | DDPM Forward Process | $q(x_t \| x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)$ |
 | DDPM Reverse Process | $p_\theta(x_{t-1} \| x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$ |
-| DDPM Evidence Lower Bound (ELBO) | $\mathcal{L}_{vlb} = L_0 + L_1 + \dots + L_T$ ➔ $\mathcal{L}_{simple}(\theta) = \mathbb{E}_{t,x_0,\epsilon}[\|\epsilon - \epsilon_\theta(\sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon, t)\|^2]$|
+| ELBO (단순화) | $\mathcal{L}_{simple}(\theta) = \mathbb{E}_{t,x_0,\epsilon}[\|\epsilon - \epsilon_\theta(\sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon, t)\|^2]$ |
+| DDIM Sampler | $x_{t-1} = \sqrt{\bar{\alpha}_{t-1}}\hat{x}_0 + \sqrt{1-\bar{\alpha}_{t-1}-\sigma_t^2}\cdot\epsilon_\theta + \sigma_t\epsilon$ |
+| CFG 가이던스 | $\tilde{\epsilon}_\theta(x_t, c) = \epsilon_\theta(x_t) + w \cdot [\epsilon_\theta(x_t, c) - \epsilon_\theta(x_t)]$ |
 | SDE (확률미분방정식) | $dx = f(x,t)dt + g(t)dw$ |
 
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_ddpm_theory_and_math.ipynb` | 마르코프 체인 기반의 확산. Forward와 Reverse process 수식 도출. |
-| `02_unet_for_diffusion.ipynb` | 노이즈 예측기(Noise Predictor) 역할을 하는 DDPM 전용 UNet 아키텍처 해부 |
-| `03_conditional_diffusion_cfg.ipynb` | Classifier-Free Guidance (CFG): 텍스트 등 조건을 부여하여 생성 방향성 조절 |
-| `04_score_based_models_and_sde.ipynb` | Score-matching과 Langevin 역학. 이산(Discrete) 시간에서 연속(Continuous) 시간 SDE로 확장에 대한 개념 |
+| `01_ddpm_theory_and_math.ipynb` | 마르코프 체인 기반의 확산. Forward/Reverse process 수식 도출, ELBO 유도과정 완전 전개 |
+| `02_noise_schedules_and_samplers.ipynb` | **[신설]** Linear/Cosine/EDM 노이즈 스케줄 비교; DDIM(비마르코프 역방향), DPM-Solver++ 원리 및 스텝 수 vs 품질 Trade-off |
+| `03_unet_for_diffusion.ipynb` | 노이즈 예측기 역할의 DDPM 전용 UNet: 잔차 블록, Cross-Attention, 시간 임베딩(Sinusoidal) |
+| `04_conditional_diffusion_cfg.ipynb` | Classifier-Free Guidance(CFG) 수식 도출; Guidance Scale 조절, ControlNet 조건부 제어 개요 |
+| `05_score_matching_and_sde.ipynb` | **[분리]** Score Matching → Langevin Dynamics → 연속 시간 SDE/ODE 통합 프레임워크 (Song et al. 2021) |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_ddpm_forward_reverse.ipynb` | 특정 이미지에 스케줄러(Beta)를 적용해 노이즈를 입히고(Forward), 수식에 따라 제거하는(Reverse) 시뮬레이션 |
-| `practice/ex02_implement_cfg_generation.ipynb` | 클래스 조건부 기반의 손글씨 또는 특정 도메인 이미지 생성 및 조건 조작 훈련 |
+| `practice/ex01_ddpm_forward_reverse.ipynb` | Linear/Cosine 스케줄로 노이즈를 입히고(Forward), DDIM Sampler로 제거하는(Reverse) 시뮬레이션 비교 |
+| `practice/ex02_implement_cfg_generation.ipynb` | 클래스 조건부 MNIST CFG 생성 + Guidance Scale에 따른 품질-다양성 Trade-off 실험 |
 
-**주요 키워드**: `DDPM`, `ELBO`, `UNet`, `CFG (Classifier-Free Guidance)`, `SDE`, `Langevin Dynamics`
+**주요 키워드**: `DDPM`, `ELBO`, `DDIM`, `DPM-Solver++`, `UNet`, `CFG`, `Score Matching`, `SDE`, `Langevin Dynamics`
 
 ---
 
@@ -508,30 +514,32 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- 대규모 모델의 서빙에서 병목(Latency, Throughput)이 일어나는 물리적 원인을 파악하고, PagedAttention과 양자화를 이용한 해결책을 구축한다.
+- 대규모 모델 서빙에서 병목(Latency, Throughput)이 발생하는 물리적 원인을 파악하고, FlashAttention · Speculative Decoding · PagedAttention · 최신 양자화를 이용한 종합적 해결책을 구축한다.
 
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
-| FlashAttention Tiling | $O\left(\frac{N^2 d}{M}\right)$ (Tiling & Recomputation을 통한 SRAM 중심 IO 최적화) |
-| KV Cache 크기 | $2 \times L \times H \times D \times \text{batch} \times \text{seq\_len} \times \text{bytes}$ |
-| AWQ (Activation-aware Weight) | $\min_Q \| WX - Q(W \cdot S)S^{-1}X \|^2$ (아웃라이어 인지 양자화) |
+| FlashAttention IO 복잡도 | $O\left(\frac{N^2 d}{M}\right)$ HBM 접근량, $M$ = SRAM 크기 |
+| Speculative Decoding 기댓값 속도 | $E[\text{accepted tokens}] = \frac{1 - \beta^{k+1}}{1-\beta}$ ($\beta$ = 드래프트 수용률, $k$ = 드래프트 길이) |
+| GPTQ 최적화 (Hessian 기반) | $\min_{\hat{W}} \|WX - \hat{W}X\|_F^2$ w.r.t. $\hat{W} = \text{Round}(W - \delta W)$, $\delta W$ from Hessian |
+| AWQ (Activation-aware) | $\min_Q \| WX - Q(W \cdot S)S^{-1}X \|^2$ (채널별 스케일 $S$로 아웃라이어 보호) |
 
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_inference_bottlenecks.ipynb` | Prefill 단계 연산량(Compute-bound) vs Decode 단계 대역폭(Memory-bound)의 개념 |
-| `02_flash_attention_deepdive.ipynb` | Tiling 기법과 하드웨어 HBM/SRAM 구조. FlashAttention 버전별 성능 발전사 |
-| `03_vllm_and_paged_attention.ipynb` | 메모리 파편화를 막는 vLLM PagedAttention 메커니즘, Continuous Batching 및 스케줄링 |
-| `04_advanced_quantization_awq_gptq.ipynb` | 단순 PTQ를 넘어서는 최신 LLM 양자화(AWQ, GPTQ) 전략, Outlier 채널 보호 수학 적용 |
+| `01_inference_bottlenecks.ipynb` | Prefill(Compute-bound) vs Decode(Memory-bound) 물리 원인 분석; Roofline으로 KV Cache 연산 AI 계산 |
+| `02_flash_attention_deepdive.ipynb` | IO Complexity 수식, Tiling + Recomputation 원리, FlashAttention v1→v2→v3 성능 발전사 |
+| `03_speculative_decoding.ipynb` | **[신설]** Draft-Verify 패러다임; 수용률 $\beta$와 기댓 토큰 수 유도; Medusa·EAGLE 등 다중 헤드 방식 비교 |
+| `04_vllm_and_paged_attention.ipynb` | OS Page Table 차용 PagedAttention 메커니즘, Continuous Batching, 동적 KV Block 스케줄링 |
+| `05_quantization_gptq_awq.ipynb` | **[분리]** PTQ 기초 → GPTQ(Hessian 2차 최적화) → AWQ(Scale 채널 보호) → W4A16/INT8/FP8 비교 벤치마크 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_paged_attention_sim.ipynb` | OS의 Page Table(가상 메모리) 개념을 차용한 PagedAttention의 메모리 블록 할당 시뮬레이션 코드 |
-| `practice/ex02_awq_quantization_eval.ipynb` | Llama 모델의 가중치를 AWQ 방식으로 W4A16 양자화한 후 Perplexity 손실 유무를 평가 |
+| `practice/ex01_paged_attention_sim.ipynb` | PagedAttention 메모리 블록 할당 시뮬레이션 — 물리/가상 블록 매핑 및 KV Copy-on-Write 구현 |
+| `practice/ex02_awq_quantization_eval.ipynb` | Llama 가중치를 AWQ 방식 W4A16으로 양자화한 후 Perplexity 및 속도 비교 평가 |
 
-**주요 키워드**: `FlashAttention`, `PagedAttention`, `Continuous Batching`, `AWQ`, `KV Cache`
+**주요 키워드**: `FlashAttention`, `Speculative Decoding`, `EAGLE`, `PagedAttention`, `Continuous Batching`, `AWQ`, `GPTQ`, `KV Cache`, `W4A16`
 
 ---
 
@@ -541,30 +549,33 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- 모델의 출력을 인간의 윤리적, 논리적 의도에 맞게 정렬(Align)하기 위해 보상 모델을 이용한 RLHF 파이프라인과 이를 수학적으로 단순화한 DPO 기법을 마스터한다.
+- 모델 출력을 인간의 윤리적·논리적 의도에 맞게 정렬(Align)하기 위해 Policy Gradient·PPO 수식을 완전 도출하고, RLHF 파이프라인과 DPO·Constitutional AI까지 Alignment 전 기법 체계를 마스터한다.
 
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
+| REINFORCE (Policy Gradient) | $\nabla_\theta J(\theta) = \mathbb{E}[G_t \nabla_\theta \log \pi_\theta(a_t\|s_t)]$ |
+| Advantage Function | $A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$ |
+| PPO Clip 목적 함수 | $L^{CLIP}(\theta) = \mathbb{E}\left[ \min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t) \right]$ |
 | RLHF Reward Model Loss | $\mathcal{L}(\theta) = -\mathbb{E}_{(x, y_w, y_l)} \left[ \log \sigma(r_\theta(x, y_w) - r_\theta(x, y_l)) \right]$ |
-| PPO 목적 함수 | $L^{CLIP}(\theta) = \mathbb{E}\left[ \min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t) \right]$ |
-| DPO (Direct Preference Obj)| $\mathbb{E} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w\|x)}{\pi_{ref}(y_w\|x)} - \beta \log \frac{\pi_\theta(y_l\|x)}{\pi_{ref}(y_l\|x)} \right) \right]$ |
+| DPO 목적 함수 | $\mathbb{E} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w\|x)}{\pi_{ref}(y_w\|x)} - \beta \log \frac{\pi_\theta(y_l\|x)}{\pi_{ref}(y_l\|x)} \right) \right]$ |
 
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_rl_for_nlp_basics.ipynb` | 강화학습 기초: 마르코프 체인(MDP), Policy Gradient 시퀀스 생성 수식, Actor-Critic |
-| `02_rlhf_pipeline_overview.ipynb` | InstructGPT 논문 기반 SFT(Supervised Tuning) → RM(Reward Model) → PPO 3단계 아키텍처 구성 요소 |
-| `03_direct_preference_optimization.ipynb` | 보상 모델을 생략하는 DPO의 베이즈 기반 수학적 도출 및 최신 파생 기법 (ORPO, KTO) |
-| `04_red_teaming_and_constitutional_ai.ipynb` | 모델의 안전성과 탈옥(Jailbreak) 방어. Anthropic의 RLAIF(AI를 이용한 피드백) 프레임워크 |
+| `01_rl_fundamentals_mdp_policy.ipynb` | MDP 정의, Bellman 방정식, REINFORCE(Policy Gradient) 수식 도출, 리워드 신호 설계 |
+| `02_actor_critic_and_ppo.ipynb` | **[신설]** Advantage Function 유도, A2C → PPO-Clip 수식 완전 전개, KL 페널티 vs Clip 비교 |
+| `03_rlhf_pipeline_overview.ipynb` | InstructGPT: SFT → Reward Model → PPO 3단계 아키텍처 + Bradley-Terry 모델 수식 |
+| `04_dpo_and_preference_learning.ipynb` | DPO 베이즈 도출, RLHF와 성능 비교, ORPO·KTO·SimPO 파생 기법 개요 |
+| `05_constitutional_ai_and_rlaif.ipynb` | **[신설]** Anthropic CAI 원칙, AI-피드백(RLAIF) 자동화 파이프라인, Red Teaming·Jailbreak 방어 기법 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_train_reward_model.ipynb` | 선호도(Preference) Pair 쌍 데이터를 활용하여 Bradley-Terry 모델 기반 Reward Model 훈련 로직 구현 |
-| `practice/ex02_dpo_fine_tuning_lora.ipynb` | 허깅페이스 TRL 라이브러리와 LoRA(PEFT)를 적용해 베이스 모델을 DPO를 통해 지시학습 봇으로 바꾸기 |
+| `practice/ex01_train_reward_model.ipynb` | Preference Pair로 Bradley-Terry 기반 Reward Model 훈련; 선호도 정확도 및 Calibration 평가 |
+| `practice/ex02_dpo_fine_tuning_lora.ipynb` | TRL + LoRA(PEFT)로 베이스 모델을 DPO 지시학습 봇으로 전환; RLHF vs DPO 수렴 속도 비교 |
 
-**주요 키워드**: `RLHF`, `PPO`, `DPO`, `Bradley-Terry Model`, `Alignment`, `TRL`
+**주요 키워드**: `MDP`, `Policy Gradient`, `PPO`, `Advantage`, `RLHF`, `DPO`, `ORPO`, `Bradley-Terry`, `Constitutional AI`, `RLAIF`
 
 ---
 
@@ -574,30 +585,31 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- DeepSeek-V3와 Qwen3.5 등 최신 중국발 오픈소스 LLM의 핵심 연산 효율화 기법인 Multi-head Latent Attention (MLA) 및 Sparse MoE의 원리를 분석하고 코드 레벨에서 이해한다.
+- DeepSeek-V3의 FP8 훈련·MLA·Auxiliary-Loss-Free 로드밸런싱 기법을 수식 수준에서 분석하고, Linear Attention(GLA/RetNet/Mamba)과 Qwen Hybrid 구조, Long-context Sparse Attention의 최신 흐름을 통합적으로 이해한다.
 
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
-| MLA (Latent Compression) | $\mathbf{c}_t^{KV} = W_d^{KV} \mathbf{h}_t$ (고차원 활성화 값을 저차원 Latent 공간으로 투영하여 KV Cache 대폭 감소) |
-| DeepSeekMoE 라우팅 | $\text{Top-}k$ 전문가 라우팅에서 Shared Expert와 Routed Expert 분리 (지식의 파편화 방지) |
-| MTP (Multi-Token Prediction) | $L_{total} = L_{ce}(y_{t}) + \lambda \sum_{i=1}^{k} L_{ce}(y_{t+i})$ (복수의 미래 토큰을 동시 예측) |
+| MLA KV 압축 | $\mathbf{c}_t^{KV} = W_d^{KV} \mathbf{h}_t \in \mathbb{R}^{d_c}$, $d_c \ll d_{KV}$ (KV Cache $d_c/d_{KV}$배 축소) |
+| FP8 스케일링 | $Q(x) = \text{round}(x / s) \ cdot s_{max} / 127$ (FP8 E4M3, 채널별 스케일) |
+| Linear Attention | $O(x) = \phi(Q)\left(\sum_i \phi(K_i)^T V_i\right) / \sum_i \phi(Q)\phi(K_i)^T$ (시퀀스 길이 $O(1)$ 메모리) |
+| YaRN 컨텍스트 확장 | $\theta_i' = \theta_i \cdot (s \cdot d_{model} / \pi)^{2i/d}$ (스케일 인자 $s$로 RoPE 주파수 재조정) |
 
 **강의 파일**
 | 파일 | 내용 |
-|------|------|
-| `01_deepseek_v3_architecture.ipynb` | DeepSeek-V3 혁신 리뷰: Auxiliary-Loss-Free Load Balancing, FP8 혼합 정밀도 훈련 |
-| `02_multi_head_latent_attention.ipynb` | GQA(Grouped-Query Attention)의 한계와 MLA를 통한 차원 축소 및 메모리 IO(Off-chip traffic) 최소화 |
-| `03_qwen_hybrid_attention.ipynb` | Qwen3.5의 Gated Delta Networks (Linear Attention)와 Sparse MoE의 결합 |
-| `04_long_context_optimization.ipynb` | DSA(DeepSeek Sparse Attention)와 Long-context 처리 비용 절감(>50%) 기법 |
+|------|---|
+| `01_deepseek_v3_fp8_training.ipynb` | **[재설계]** FP8 E4M3 혼합 정밀도 원리, Auxiliary-Loss-Free 로드밸런싱(편향 보정), MTP 수식 도출 |
+| `02_multi_head_latent_attention.ipynb` | MLA KV 압축 수식 완전 도출, Up-projection 복원, GQA 대비 KV Cache 절감률 정량 비교 |
+| `03_linear_attention_and_hybrids.ipynb` | **[재설계]** GLA·RetNet·Mamba 등 Linear Attention 계열; Qwen의 SWA+Full+Linear Hybrid 구조 |
+| `04_long_context_and_sparse_attn.ipynb` | **[재편]** YaRN + DSA(DeepSeek Sparse Attention) + Sliding Window 방법론 통합; >50% 비용 절감 기법 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_mla_from_scratch.ipynb` | 순수 PyTorch/TensorFlow로 KV 차원 압축 및 복원 과정을 거치는 MLA 커스텀 레이어 구현 |
-| `practice/ex02_shared_expert_moe.ipynb` | 모든 토큰이 참조하는 Shared Expert와 특정 지식만 담당하는 Routed Expert 레이어 분리 코딩 |
+| `practice/ex01_mla_from_scratch.ipynb` | KV 차원 압축(down-projection) → 저장 → 복원(up-projection) MLA 레이어 구현 + GQA 대비 메모리 측정 |
+| `practice/ex02_linear_attention_layer.ipynb` | **[교체]** 인과적 GLA(Gated Linear Attention) 레이어 구현 및 시퀀스 길이별 속도·메모리 비교 |
 
-**주요 키워드**: `DeepSeek-V3`, `Qwen3.5`, `Multi-head Latent Attention (MLA)`, `DeepSeekMoE`, `MTP`, `FP8 Training`
+**주요 키워드**: `DeepSeek-V3`, `FP8 Training`, `MLA`, `Auxiliary-Loss-Free`, `Linear Attention`, `GLA`, `Mamba`, `Qwen Hybrid`, `YaRN`, `DSA`
 
 ---
 
@@ -607,30 +619,33 @@ projects/                      ← 종합 실전 프로젝트 (Basic ~ SOTA)
 
 **학습 목표**
 
-- OpenAI의 Sora와 Tencent의 HunyuanVideo를 구동하는 핵심 근간인 Diffusion Transformer (DiT) 구조를 해부하고, 시공간(Spatiotemporal) 비디오 압축 및 토큰화 원리를 구현한다.
+- DiT 아키텍처의 수식 기초(adaLN-Zero)부터 현대 비디오 생성 훈련 패러다임인 Flow Matching, 그리고 Sora·HunyuanVideo의 3D 비디오 인코딩/디코딩 아키텍처까지 SOTA Video Generation 전 과정을 이해하고 구현한다.
 
 **수학적 기초**
 | 개념 | 수식 |
 |------|------|
-| DiT 조건부 삽입 (adaLN) | $\mathbf{h} = \text{LayerNorm}(\mathbf{h}) \odot (1 + \gamma_c) + \beta_c$ (시간 $t$와 텍스트 컨디션을 scale/shift로 주입) |
-| 3D Causal VAE | 잠재 공간 축소: $z \in \mathbb{R}^{C \times (T/M_t) \times (H/M_h) \times (W/M_w)}$ (M은 압축 비율) |
-| Patch-based Flattening | 3D 비디오 텐서 $(T, H, W)$를 분할 후 비겹침 패치 시퀀스로 1D (Sequence Length) 변환 |
+| adaLN-Zero 조건부 삽입 | $\mathbf{h} = \alpha_c \odot \text{LayerNorm}(\mathbf{h}) \odot (1 + \gamma_c) + \beta_c$, 초기값 $\alpha_c=0$ (학습 안정화) |
+| 3D Causal VAE 압축 | $z \in \mathbb{R}^{C \times (T/M_t) \times (H/M_h) \times (W/M_w)}$ ($M$ = 압축 비율) |
+| Flow Matching (ODE) | $\frac{dx}{dt} = v_\theta(x, t)$, $\mathcal{L}_{FM} = \mathbb{E}_{t,x_0,x_1}[\|v_\theta(x_t, t) - (x_1 - x_0)\|^2]$ |
+| Rectified Flow | $x_t = (1-t)x_0 + t x_1$, 직선 경로 ODE (DDPM의 노이즈 경로 vs 직선 비교) |
+| Spatiotemporal Patch | 3D 패치 $(p_t, p_h, p_w)$ → 시퀀스 길이 $= (T/p_t)(H/p_h)(W/p_w)$ |
 
 **강의 파일**
 | 파일 | 내용 |
 |------|------|
-| `01_from_unet_to_dit.ipynb` | 기존 U-Net 기반 Diffusion의 한계와 Scalability 법칙을 증명한 DiT(Diffusion Transformer) 트랜지션 |
-| `02_spatiotemporal_vae.ipynb` | Sora 및 HunyuanVideo의 핵심: 3D Causal VAE를 활용한 시간적 깜박임(Flickering) 억제 및 시간/공간 압축 |
-| `03_sora_and_patch_tokenization.ipynb` | 다양한 해상도/비율을 지원하게 만드는 Spatiotemporal Patches 구조와 1D 시퀀스 매핑 |
-| `04_hunyuanvideo_dual_stream.ipynb` | HunyuanVideo의 Dual-stream to Single-stream 멀티모달 퓨전 (텍스트+비디오 토큰의 MLLM 기반 퓨전 구조) |
+| `01_from_unet_to_dit.ipynb` | U-Net 한계 → DiT 스케일링 법칙 검증(Peebles & Xie 2023); 패치 크기와 FID 관계 분석 |
+| `02_spatiotemporal_vae.ipynb` | 3D Causal VAE 구조; 시간적 Flickering 억제 원리; 공간/시간 압축 비율에 따른 품질 Trade-off |
+| `03_dit_conditioning_and_adaln.ipynb` | **[신설]** adaLN-Zero 수식 도출; 시간 $t$·클래스·텍스트 조건 주입 방식; CFG in DiT 설계 |
+| `04_flow_matching_and_rectified_flow.ipynb` | **[신설]** Flow Matching ODE 수식; Rectified Flow (직선 경로); SD3·Flux와 DDPM 훈련 방식 비교 |
+| `05_sora_and_hunyuan_architecture.ipynb` | **[재편]** Sora 스케일링 + NaViT 가변 해상도; HunyuanVideo Dual→Single-stream 멀티모달 퓨전 비교 |
 
 **실습 파일**
 | 파일 | 내용 |
 |------|------|
-| `practice/ex01_spatiotemporal_patcher.ipynb` | 미니 3D 비디오 텐서를 입력받아 시공간 포지셔널 인코딩(Positional Encoding)이 추가된 DiT 패치 시퀀스로 변환하는 함수 구현 |
-| `practice/ex02_dit_block_with_adaln.ipynb` | 트랜스포머 블록에 시간 단계 $t$와 클래스 조건을 주입하는 Adaptive Layer Norm (adaLN-Zero) 모듈 구현 및 노이즈 예측기 조립 |
+| `practice/ex01_spatiotemporal_patcher.ipynb` | 3D 비디오 텐서를 입력받아 시공간 3D RoPE가 추가된 DiT 패치 시퀀스로 변환하는 모듈 구현 |
+| `practice/ex02_dit_block_with_adaln.ipynb` | adaLN-Zero 모듈 구현 + Flow Matching Loss로 Moving MNIST를 노이즈 예측하는 소형 DiT 조립 |
 
-**주요 키워드**: `DiT`, `Sora`, `HunyuanVideo`, `Spatiotemporal VAE`, `adaLN`, `3D Causal VAE`
+**주요 키워드**: `DiT`, `adaLN-Zero`, `Flow Matching`, `Rectified Flow`, `Sora`, `HunyuanVideo`, `3D Causal VAE`, `NaViT`, `Flux`
 
 ---
 
