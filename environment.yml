@@ -1,0 +1,35 @@
+name: tf_study
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    # TensorFlow (Apple Silicon)
+    - tensorflow-macos
+    - tensorflow-metal
+    # 데이터 처리
+    - numpy
+    - pandas
+    - scikit-learn
+    # 시각화
+    - matplotlib
+    - seaborn
+    # 이미지 처리
+    - Pillow
+    - opencv-python-headless
+    # Jupyter 환경
+    - jupyter
+    - ipykernel
+    - ipywidgets
+    # NLP (Chapter 06-07)
+    - konlpy          # 한국어 형태소 분석
+    - transformers    # HuggingFace (BERT Fine-Tuning)
+    - datasets        # HuggingFace 데이터셋
+    # API 서빙 (Project 02)
+    - fastapi
+    - uvicorn
+    # 기타 유틸리티
+    - tqdm
+    - tensorboard

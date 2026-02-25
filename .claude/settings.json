@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(conda info:*)",
+      "Bash(python3:*)",
+      "Bash(/Users/alex/AI_TestPlayground/chapter01_basics/01_tensorflow_intro.ipynb:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
