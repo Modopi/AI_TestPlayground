@@ -1,0 +1,9 @@
+{
+  "target_file": "chapter03_training_mechanics/practice/ex02_custom_callback.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 데이터 준비 및 기본 모델 구성\n\nFashion MNIST 데이터를 불러오고 콜백 실험에 사용할 기본 분류 모델을 Sequential API로 작성하세요.\n\n**요구사항:**\n- 데이터를 정규화([0, 1])하고, flatten → Dense(128, relu) → Dense(10, softmax) 구조의 모델을 만드세요.\n- Adam 옵티마이저와 sparse_categorical_crossentropy 손실 함수로 컴파일하세요.",
+    "---\n## Q2: 커스텀 콜백 클래스 작성\n\n`tf.keras.callbacks.Callback`을 상속받아 에포크별 학습률 감쇠와 Early Stopping 기능을 동시에 수행하는 커스텀 콜백을 직접 구현하세요.\n\n**요구사항:**\n- 클래스 이름은 `CustomSchedulerCallback`으로 하세요.\n- `on_epoch_end(self, epoch, logs=None)` 메서드를 오버라이드하세요.\n- 매 에포크 종료 시 현재 학습률에 0.95를 곱하여 점진적으로 감소(`ExponentialDecay` 효과)시키세요.\n- 검증 정확도(`val_accuracy`)가 `patience` 에포크 동안 개선되지 않으면 `self.model.stop_training = True`로 학습을 중단시키세요.",
+    "---\n## Q3: 콜백 적용 학습 및 결과 시각화\n\nQ2에서 만든 콜백을 실제 학습에 적용하고, 학습률과 검증 정확도 추이를 그래프로 확인하세요.\n\n**요구사항:**\n- `model.fit()`의 `callbacks` 인자에 `CustomSchedulerCallback(patience=3)`을 넘기세요.\n- 학습 완료 후 에포크별 검증 정확도와 학습률 변화를 각각 선 그래프로 시각화하세요."
+  ]
+}

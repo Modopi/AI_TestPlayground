@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter05_computer_vision/practice/ex01_cifar10_classifier.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: CIFAR-10 데이터 로드 및 전처리\n\nCIFAR-10 데이터를 로드하고 모델 학습에 적합한 형태로 전처리하세요.\n\n**요구사항:**\n- `tf.keras.datasets.cifar10.load_data()`로 데이터를 로드하세요.\n- 픽셀값을 `[0, 1]`로 정규화하고 레이블을 One-Hot 인코딩(`tf.keras.utils.to_categorical`)하세요.\n- 훈련/테스트 데이터의 shape과 dtype을 출력하여 확인하세요.",
+    "---\n## Q2: CNN 모델 구성\n\nCIFAR-10 분류를 위한 CNN 모델을 Functional API로 구현하세요.\n\n**요구사항:**\n- 입력 shape은 `(32, 32, 3)`으로 설정하세요.\n- 필터 수가 다른 Conv2D 블록을 최소 3개 쌓고, 각 블록 뒤에 `BatchNormalization()`과 `MaxPooling2D()`를 추가하세요.\n- Flatten 후 Dense(512, relu), Dropout(0.5), Dense(10, softmax)로 출력층을 구성하세요.\n- `model.summary()`로 전체 파라미터 수를 확인하세요.",
+    "---\n## Q3: 학습 설정 및 실행\n\n모델을 컴파일하고 조기 종료(Early Stopping)와 학습률 감소 콜백을 포함하여 학습하세요.\n\n**요구사항:**\n- Adam 옵티마이저(`lr=1e-3`)와 `categorical_crossentropy` 손실 함수로 컴파일하세요.\n- `EarlyStopping(monitor='val_loss', patience=5)`, `ReduceLROnPlateau(factor=0.5, patience=3)` 콜백을 추가하세요.\n- 최대 50 에포크, 배치 사이즈 64로 학습하고 최종 테스트 정확도를 출력하세요.",
+    "---\n## Q4: 혼동 행렬(Confusion Matrix) 시각화\n\n테스트셋에 대한 예측 결과를 혼동 행렬로 시각화하여 모델의 강점과 약점을 파악하세요.\n\n**요구사항:**\n- `model.predict(x_test)`로 예측 클래스 인덱스를 구하세요.\n- `sklearn.metrics.confusion_matrix`와 `seaborn.heatmap`으로 10×10 행렬을 시각화하세요.\n- 각 클래스명(airplane, automobile 등)을 축에 표시하세요."
+  ]
+}

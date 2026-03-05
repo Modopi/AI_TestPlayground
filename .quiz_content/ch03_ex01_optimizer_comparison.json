@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter03_training_mechanics/practice/ex01_optimizer_comparison.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 데이터 준비\n\n`tf.keras.datasets.fashion_mnist.load_data()`를 사용하여 Fashion MNIST 데이터셋을 로드하고, 학습에 적합하게 전처리하세요.\n\n**요구사항:**\n- 이미지를 `float32`로 캐스팅하고 255.0으로 나누어 `[0, 1]` 범위로 정규화하세요.\n- 28×28 이미지를 1D 벡터 784 차원으로 `reshape(-1, 784)` 하세요.\n- 훈련 데이터 60,000개 중 앞 50,000개는 `X_train`, 나머지 10,000개는 `X_val`로 분리하세요.\n- 각 분할의 shape을 출력하여 확인하세요.",
+    "---\n## Q2: 공통 모델 생성 함수 및 옵티마이저 정의\n\n세 옵티마이저를 공정하게 비교하려면 **동일한 가중치로 초기화된** 모델이 필요합니다. 모델 생성 함수와 비교할 옵티마이저 딕셔너리를 작성하세요.\n\n**요구사항:**\n- `create_model(optimizer, seed=42)` 함수를 정의하세요. 내부에서 `GlorotUniform(seed=seed)`를 사용해 같은 초기 가중치를 보장하세요.\n- 모델 구조: `Dense(256, relu) → Dropout(0.3) → Dense(128, relu) → Dense(10, softmax)`\n- `optimizer_configs` 딕셔너리에 SGD(lr=0.01, momentum=0.9), Adam(lr=0.001), RMSprop(lr=0.001) 세 옵티마이저 객체를 담으세요.",
+    "---\n## Q3: 3종 옵티마이저 학습 루프\n\nQ2에서 정의한 옵티마이저 딕셔너리를 순회하며 각각 모델을 생성·학습하세요.\n\n**요구사항:**\n- 반복문으로 각 옵티마이저마다 `create_model()`을 호출하고 `fit()`을 실행하세요.\n- 학습 조건: 에포크 20, 배치 사이즈 128, `verbose=0`\n- `time.time()`으로 학습 소요 시간을 측정하고, `all_histories`와 `training_times` 딕셔너리에 각각 저장하세요.",
+    "---\n## Q4: 학습 곡선 시각화\n\n3개 옵티마이저의 학습 양상을 한눈에 비교할 수 있는 그래프를 그리세요.\n\n**요구사항:**\n- `plt.subplots(2, 2)` 2×2 레이아웃을 사용하세요.\n- 각 서브플롯에 훈련 손실, 검증 손실, 훈련 정확도, 검증 정확도를 옵티마이저별로 다른 색상의 선으로 겹쳐 그리세요.\n- 범례(legend)와 축 레이블을 반드시 추가하세요."
+  ]
+}

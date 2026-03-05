@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter11_custom_kernels/practice/ex01_vector_add_cuda.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: 벡터 덧셈 — NumPy vs Python 루프 벤치마크\n\nCUDA 커널의 필요성을 체감하기 위해, 먼저 순수 Python 루프와 NumPy 벡터화 연산의 속도 차이를 직접 측정해 보세요.\n\n**요구사항:**\n- 크기 `N = 10_000_000`인 float32 배열 A, B를 생성하세요.\n- 순수 Python `for`문과 NumPy `a + b` 두 방식으로 벡터 합산을 수행하고 `time.time()`으로 소요 시간을 측정하세요.\n- 두 방식의 결과가 동일한지 검증하고, 속도 차이(배율)를 출력하세요.",
+      "answer_code": "import numpy as np\nimport time\n\nN = 10_000_000\nnp.random.seed(42)\na = np.random.randn(N).astype(np.float32)\nb = np.random.randn(N).astype(np.float32)\n\n# Python 루프 (작은 N으로)\nN_small = 100_000\nt0 = time.time()\nc_loop = [a[i] + b[i] for i in range(N_small)]\nloop_time = time.time() - t0\n\n# NumPy\nt0 = time.time()\nc_numpy = a + b\nnumpy_time = time.time() - t0\n\nprint(f\"Python 루프 ({N_small:,}개): {loop_time*1000:.2f} ms\")\nprint(f\"NumPy ({N:,}개): {numpy_time*1000:.2f} ms\")\nprint(f\"NumPy가 동일 크기 기준 ~{(loop_time/N_small)/(numpy_time/N):.0f}x 빠름\")"
+    },
+    {
+      "prompt": "---\n## Q2: 스레드 그리드 / 블록 구성 계산기\n\nCUDA 커널에서 스레드 수와 블록 수를 올바르게 계산하는 함수를 작성하세요.\n\n**요구사항:**\n- `calc_grid_block(N, threads_per_block=256)` 함수를 정의하세요.\n- `num_blocks`는 `ceil(N / threads_per_block)`으로 계산하세요.\n- N = 1000, 10_000, 1_000_000, 10_000_000 에 대해 각각 블록 수와 전체 스레드 수를 출력하세요.\n- 전체 스레드 수가 N을 넘는 이유(패딩)를 설명하는 주석을 추가하세요.",
+      "answer_code": "import math\n\ndef calc_grid_block(N, threads_per_block=256):\n    # 데이터 N개를 커버하려면 블록이 올림 나눗셈만큼 필요\n    num_blocks = math.ceil(N / threads_per_block)\n    total_threads = num_blocks * threads_per_block\n    return num_blocks, total_threads\n\ntest_sizes = [1_000, 10_000, 1_000_000, 10_000_000]\nthreads = 256\n\nprint(f\"{'N':>12} {'블록 수':>10} {'전체 스레드':>14} {'패딩 스레드':>12}\")\nprint('-' * 52)\nfor N in test_sizes:\n    blocks, total = calc_grid_block(N, threads)\n    padding = total - N\n    print(f\"{N:>12,} {blocks:>10,} {total:>14,} {padding:>12,}\")"
+    },
+    {
+      "prompt": "---\n## Q3: CuPy로 벡터 덧셈 가속 (GPU 있는 경우) / NumPy 타임라인 시뮬레이션\n\nCUDA 커널의 개념을 CuPy(GPU가 있는 경우) 또는 NumPy로 시뮬레이션하여, 커널이 어떻게 데이터를 처리하는지 직접 체험하세요.\n\n**요구사항:**\n- GPU가 없는 환경에선 `numpy`를 `cupy`처럼 사용하는 시뮬레이션으로 대체하세요.\n- N = 10_000_000 배열 덧셈을 수행하고 소요 시간을 측정하세요.\n- 커널 개념 설명: 배열을 `num_blocks`개의 블록으로 나누어 각 블록을 병렬로 처리하는 구조를 NumPy 슬라이싱으로 시뮬레이션하세요.",
+      "answer_code": "import numpy as np\nimport time\n\ntry:\n    import cupy as cp\n    xp = cp\n    print(\"CuPy 사용 (GPU 가속)\")\nexcept ImportError:\n    xp = np\n    print(\"CuPy 없음 → NumPy로 시뮬레이션\")\n\nN = 10_000_000\na = xp.random.randn(N).astype(xp.float32)\nb = xp.random.randn(N).astype(xp.float32)\n\n# 블록 단위 처리 시뮬레이션\nthreads_per_block = 256\nnum_blocks = (N + threads_per_block - 1) // threads_per_block\nc = xp.zeros(N, dtype=xp.float32)\n\nt0 = time.time()\nfor block_idx in range(min(num_blocks, 100)):  # 시뮬레이션으로 처음 100블록만\n    start = block_idx * threads_per_block\n    end = min(start + threads_per_block, N)\n    c[start:end] = a[start:end] + b[start:end]\nblocked_time = time.time() - t0\n\nt0 = time.time()\nc_full = a + b  # 실제 벡터 연산\nfull_time = time.time() - t0\n\nprint(f\"블록 루프 (처음 100블록): {blocked_time*1000:.2f} ms\")\nprint(f\"전체 벡터 연산: {full_time*1000:.2f} ms\")\nprint(\"\\n→ GPU에서는 이 블록들이 동시(병렬)로 처리됩니다!\")"
+    }
+  ]
+}

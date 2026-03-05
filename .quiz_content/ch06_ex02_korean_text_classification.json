@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter06_nlp/practice/ex02_korean_text_classification.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 한국어 데이터셋 로드 및 탐색\n\n한국어 영화 리뷰 데이터(NSMC 등)를 로드하고 기본적인 데이터 탐색을 수행하세요.\n\n**요구사항:**\n- 데이터를 로드하여 pandas DataFrame 형태로 확인하세요.\n- 레이블(긍정/부정) 분포를 시각화하고, 리뷰 길이(문자 수) 분포를 히스토그램으로 그리세요.\n- 결측값과 중복 데이터를 제거하세요.",
+    "---\n## Q2: 한국어 토크나이저 적용 및 패딩\n\n`tf.keras.layers.TextVectorization`을 사용하여 한국어 텍스트를 정수 시퀀스로 변환하세요.\n\n**요구사항:**\n- `TextVectorization(max_tokens=10000, output_sequence_length=50)` 레이어를 생성하세요.\n- `adapt()`를 훈련 텍스트에 적용하여 어휘집을 구축하세요.\n- 변환된 훈련/테스트 데이터의 shape을 확인하세요.",
+    "---\n## Q3: 분류 모델 구성 및 학습\n\n임베딩(Embedding)과 1D Convolution을 사용한 텍스트 분류 모델을 만들고 학습하세요.\n\n**요구사항:**\n- `Embedding → Conv1D(128, 5, relu) → GlobalMaxPooling1D → Dense(64, relu) → Dense(1, sigmoid)` 구조로 모델을 구성하세요.\n- `binary_crossentropy`와 `Adam`으로 컴파일하고 10 에포크 학습하세요.",
+    "---\n## Q4: 새 문장으로 실시간 예측\n\n학습된 모델로 임의의 한국어 문장의 감성(긍정/부정)을 예측하는 함수를 작성하세요.\n\n**요구사항:**\n- `predict_sentiment(text: str) -> str` 함수를 정의하세요.\n- 입력 문장을 TextVectorization 레이어로 변환하고, 모델 예측 확률이 0.5 이상이면 '긍정', 미만이면 '부정'을 반환하세요.\n- 긍정/부정 각각 3개 이상의 테스트 문장으로 함수를 호출해 결과를 확인하세요."
+  ]
+}

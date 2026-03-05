@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter09_distributed_systems/practice/ex02_1d_tensor_parallel_llm.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: 행렬 Column-Parallel 분할\n\n텐서 병렬화(Tensor Parallelism)에서 Linear 레이어의 가중치 행렬을 **열(Column) 방향**으로 분할하는 방식을 구현하세요.\n\n**요구사항:**\n- 가중치 행렬 `W = np.random.randn(768, 3072)`를 `num_gpus=4`로 열 방향으로 균등 분할하세요.\n- 각 GPU 파티션 `W_col[i]`의 shape을 출력하고, 입력 `x (shape: [2, 768])`와 행렬 곱 결과의 shape을 확인하세요.\n- 4개 GPU 결과를 `np.concatenate`로 합산(All-Gather)하면 단일 GPU 결과와 동일한지 검증하세요.",
+      "answer_code": "import numpy as np\n\nnp.random.seed(42)\nnum_gpus = 4\nbatch_size, d_model, d_ff = 2, 768, 3072\n\nW = np.random.randn(d_model, d_ff)  # (768, 3072)\nx = np.random.randn(batch_size, d_model)  # (2, 768)\n\n# Column-Parallel 분할\ncol_per_gpu = d_ff // num_gpus\nW_col = [W[:, i*col_per_gpu:(i+1)*col_per_gpu] for i in range(num_gpus)]\n\npartial_outs = [x @ W_col[i] for i in range(num_gpus)]\nall_gather_out = np.concatenate(partial_outs, axis=-1)  # All-Gather\n\n# 검증\nsingle_out = x @ W\nprint(f\"분할 전 단일 GPU 결과 shape: {single_out.shape}\")\nprint(f\"All-Gather 후 결과 shape: {all_gather_out.shape}\")\nprint(f\"최대 오차: {np.max(np.abs(single_out - all_gather_out)):.2e}\")"
+    },
+    {
+      "prompt": "---\n## Q2: Row-Parallel 분할 후 All-Reduce\n\n가중치를 **행(Row) 방향**으로 분할하는 Row-Parallel 방식을 구현하고, 각 GPU의 부분 결과를 All-Reduce(합산)하여 최종 결과를 구하세요.\n\n**요구사항:**\n- `W = (d_ff, d_model)` 형태의 행렬을 행 방향으로 `num_gpus`등분하세요.\n- 입력 `x (shape: [batch, d_ff])`도 같은 방식으로 분할하여 각 GPU에 배분하세요.\n- 각 GPU의 부분 행렬 곱 결과를 `np.sum`으로 All-Reduce하고, 단일 GPU 결과와 비교하세요.",
+      "answer_code": "import numpy as np\n\nnp.random.seed(0)\nnum_gpus = 4\nbatch_size, d_model, d_ff = 2, 768, 3072\n\nW2 = np.random.randn(d_ff, d_model)  # (3072, 768)\nx2 = np.random.randn(batch_size, d_ff)  # (2, 3072)\n\n# Row-Parallel 분할\nrow_per_gpu = d_ff // num_gpus\nW_row = [W2[i*row_per_gpu:(i+1)*row_per_gpu, :] for i in range(num_gpus)]\nx2_parts = [x2[:, i*row_per_gpu:(i+1)*row_per_gpu] for i in range(num_gpus)]\n\npartial_outs = [x2_parts[i] @ W_row[i] for i in range(num_gpus)]\nall_reduce_out = np.sum(partial_outs, axis=0)  # All-Reduce\n\nsingle_out = x2 @ W2\nprint(f\"최대 오차: {np.max(np.abs(single_out - all_reduce_out)):.2e}\")\nprint(f\"Row-Parallel + All-Reduce 검증 성공: {np.max(np.abs(single_out - all_reduce_out)) < 1e-8}\")"
+    },
+    {
+      "prompt": "---\n## Q3: 통신 비용 분석\n\nColumn-Parallel과 Row-Parallel 방식에서 각각 발생하는 통신의 종류와 크기를 계산하여 비교하세요.\n\n**요구사항:**\n- Column-Parallel의 All-Gather로 전달되는 총 데이터 크기(bytes)를 계산하세요.\n- Row-Parallel의 All-Reduce로 전달되는 총 데이터 크기(bytes)를 계산하세요.\n- 예: 데이터 타입 float32(4 bytes)를 기준으로 각 방식의 통신량을 출력하세요.",
+      "answer_code": "bytes_per_elem = 4  # float32\nbatch_size = 2\nd_model = 768\nd_ff = 3072\n\n# All-Gather: 각 GPU가 자신의 출력 (batch, d_ff/num_gpus)를 보냄\n# num_gpus-1번의 send 필요, 각 send = batch * (d_ff/num_gpus) elements\ncol_comm = (num_gpus - 1) * batch_size * (d_ff // num_gpus) * bytes_per_elem\n\n# All-Reduce: 각 GPU가 결과 (batch, d_model)를 합산\nrow_comm = (num_gpus - 1) * batch_size * d_model * bytes_per_elem\n\nprint(\"통신 비용 비교 (forward pass, float32):\")\nprint(f\"  Column-Parallel All-Gather: {col_comm:,} bytes ({col_comm/1024:.2f} KB)\")\nprint(f\"  Row-Parallel All-Reduce:    {row_comm:,} bytes ({row_comm/1024:.2f} KB)\")\nprint(f\"\\n비율: {col_comm/row_comm:.2f}x\")"
+    }
+  ]
+}

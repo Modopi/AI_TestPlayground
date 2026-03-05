@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter05_computer_vision/practice/ex02_transfer_learning_flowers.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 꽃 데이터셋 로드 및 전처리\n\n`tf.keras.utils.get_file`로 꽃(Flowers) 데이터셋을 다운로드하고 `tf.data` 파이프라인으로 로드하세요.\n\n**요구사항:**\n- `tf.keras.utils.image_dataset_from_directory`를 사용하여 이미지를 `(224, 224)`, 배치 32로 로드하세요.\n- 전체 데이터의 80%는 훈련, 20%는 검증으로 분리하세요.\n- 픽셀값을 `[0, 1]`로 정규화하고 `.prefetch(tf.data.AUTOTUNE)`을 적용하세요.",
+    "---\n## Q2: 사전 학습 베이스 모델 불러오기\n\n`MobileNetV2`를 Feature Extractor로 사용하기 위해 불러오고 가중치를 동결하세요.\n\n**요구사항:**\n- `tf.keras.applications.MobileNetV2(input_shape=(224,224,3), include_top=False, weights='imagenet')`로 모델을 로드하세요.\n- `base_model.trainable = False`로 모든 레이어를 동결하세요.\n- `base_model.summary()`에서 trainable/non-trainable 파라미터 수를 확인하세요.",
+    "---\n## Q3: 분류 헤드 추가 및 1단계 학습\n\n동결된 베이스 모델 위에 분류 헤드를 쌓아 5개 꽃 클래스를 분류하는 전체 모델을 구성하고 학습하세요.\n\n**요구사항:**\n- `GlobalAveragePooling2D() → Dropout(0.2) → Dense(5, softmax)` 구조의 헤드를 Functional API로 연결하세요.\n- Adam(`lr=1e-3`)으로 10 에포크 학습하고 검증 정확도를 출력하세요.",
+    "---\n## Q4: Fine-tuning (2단계 학습)\n\n베이스 모델의 상위 레이어를 부분적으로 해동(unfreeze)하여 Fine-tuning을 진행하세요.\n\n**요구사항:**\n- `base_model.trainable = True`로 변경 후 하위 100개 레이어만 다시 동결하세요.\n- 낮은 학습률(`lr=1e-5`)로 재컴파일하고 추가로 10 에포크 학습하세요.\n- 1단계 vs 2단계 검증 정확도를 비교하여 Fine-tuning 효과를 설명하세요."
+  ]
+}

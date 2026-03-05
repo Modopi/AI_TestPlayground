@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter04_data_pipeline/practice/ex01_build_data_pipeline.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: tf.data로 데이터셋 로드\n\n파일 경로 목록으로부터 `tf.data.Dataset`을 직접 구성하는 파이프라인의 시작 단계를 작성하세요.\n\n**요구사항:**\n- `tf.data.Dataset.from_tensor_slices((file_paths, labels))`로 기본 데이터셋을 만드세요.\n- 이미지 경로에서 이미지를 읽고, 디코딩하고, `(224, 224)`로 리사이즈하고, `float32`로 정규화하는 `parse_image(path, label)` 함수를 작성하세요.\n- `.map(parse_image, num_parallel_calls=tf.data.AUTOTUNE)`으로 매핑하세요.",
+    "---\n## Q2: 데이터 증강(Augmentation) 레이어 적용\n\n훈련 데이터에만 적용할 데이터 증강 로직을 `tf.keras.Sequential`로 구성하고, `tf.data` 파이프라인에 조건부로 적용하세요.\n\n**요구사항:**\n- `RandomFlip('horizontal')`, `RandomRotation(0.1)`, `RandomZoom(0.1)` 레이어를 사용한 `augmentation_layer`를 만드세요.\n- 훈련 데이터셋에는 `.map(lambda x, y: (augmentation_layer(x, training=True), y))`를 적용하세요.",
+    "---\n## Q3: 캐싱·셔플·프리패치 최적화\n\n`tf.data` 성능 최적화 API 3가지를 순서에 맞게 파이프라인에 연결하세요.\n\n**요구사항:**\n- `.cache()` → `.shuffle(buffer_size=1000)` → `.batch(32)` → `.prefetch(tf.data.AUTOTUNE)` 순서로 파이프라인을 완성하세요.\n- 최종 `train_ds`와 `val_ds` 변수에 각각 저장하고, `element_spec`을 출력하여 형태를 확인하세요.",
+    "---\n## Q4: 파이프라인으로 모델 학습\n\nQ3에서 완성한 `train_ds`와 `val_ds`를 사용하여 간단한 CNN 모델을 학습시키세요.\n\n**요구사항:**\n- `Conv2D(32, 3, activation='relu') → MaxPooling2D → Flatten → Dense(10, softmax)` 구조의 모델을 만드세요.\n- `model.fit(train_ds, validation_data=val_ds, epochs=5)`로 학습을 수행하고 손실과 정확도를 출력하세요."
+  ]
+}

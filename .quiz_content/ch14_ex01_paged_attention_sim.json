@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter14_extreme_inference/practice/ex01_paged_attention_sim.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: KV 블록 테이블 자료구조 구현\n\nPagedAttention에서 KV 캐시는 고정 크기 블록으로 관리됩니다. 블록 테이블과 물리 메모리를 시뮬레이션하세요.\n\n**요구사항:**\n- `BLOCK_SIZE = 16` (블록당 토큰 수), `NUM_BLOCKS = 8` (물리 블록 수) 설정\n- `free_blocks` 집합으로 사용 가능한 블록 인덱스를 관리하세요.\n- `block_table`: 시퀀스 ID → 할당된 블록 인덱스 목록 딕셔너리\n- `allocate_block(seq_id)` 함수: `free_blocks`에서 블록 하나를 꺼내 `block_table[seq_id]`에 추가\n- 시퀀스 0에 3개, 시퀀스 1에 2개 블록을 할당하고 남은 `free_blocks`를 출력하세요.",
+      "answer_code": "BLOCK_SIZE = 16\nNUM_BLOCKS = 8\n\nfree_blocks = set(range(NUM_BLOCKS))\nblock_table = {}  # seq_id -> [block_indices]\n\ndef allocate_block(seq_id):\n    if not free_blocks:\n        raise RuntimeError(\"OOM: 사용 가능한 블록 없음\")\n    block_idx = min(free_blocks)  # 가장 작은 인덱스 할당\n    free_blocks.remove(block_idx)\n    if seq_id not in block_table:\n        block_table[seq_id] = []\n    block_table[seq_id].append(block_idx)\n    print(f\"  시퀀스 {seq_id}: 블록 {block_idx} 할당\")\n\nprint(\"=== 블록 할당 시뮬레이션 ===\")\nfor _ in range(3): allocate_block(seq_id=0)\nfor _ in range(2): allocate_block(seq_id=1)\n\nprint(f\"\\n블록 테이블: {block_table}\")\nprint(f\"남은 free_blocks: {sorted(free_blocks)} ({len(free_blocks)}개)\")"
+    },
+    {
+      "prompt": "---\n## Q2: 물리 KV 캐시 읽기/쓰기 시뮬레이션\n\n블록 테이블을 기반으로 토큰의 KV 값을 물리 메모리에 쓰고 읽는 로직을 구현하세요.\n\n**요구사항:**\n- `physical_kv = np.zeros((NUM_BLOCKS, BLOCK_SIZE, HEAD_DIM))` 형태의 물리 KV 메모리를 만드세요.\n- `write_kv(seq_id, token_pos, kv_value)`: 토큰 위치로부터 블록 인덱스와 블록 내 오프셋을 계산하여 값을 씁니다.\n- `read_kv(seq_id, token_pos)`: 같은 방식으로 값을 읽습니다.\n- 시퀀스 0의 토큰 5, 10, 20번 위치에 임의의 KV 값을 쓰고, 다시 읽어서 동일성을 검증하세요.",
+      "answer_code": "import numpy as np\n\nHEAD_DIM = 64\nphysical_kv = np.zeros((NUM_BLOCKS, BLOCK_SIZE, HEAD_DIM), dtype=np.float32)\n\ndef write_kv(seq_id, token_pos, kv_value):\n    block_offset = token_pos // BLOCK_SIZE\n    within_block = token_pos % BLOCK_SIZE\n    phys_block = block_table[seq_id][block_offset]\n    physical_kv[phys_block, within_block] = kv_value\n\ndef read_kv(seq_id, token_pos):\n    block_offset = token_pos // BLOCK_SIZE\n    within_block = token_pos % BLOCK_SIZE\n    phys_block = block_table[seq_id][block_offset]\n    return physical_kv[phys_block, within_block]\n\nnp.random.seed(42)\ntest_positions = [5, 10, 20]\nfor pos in test_positions:\n    val = np.random.randn(HEAD_DIM).astype(np.float32)\n    write_kv(seq_id=0, token_pos=pos, kv_value=val)\n    read_val = read_kv(seq_id=0, token_pos=pos)\n    match = np.allclose(val, read_val)\n    print(f\"토큰 pos={pos:2d}: 쓰기/읽기 일치 = {match}\")"
+    },
+    {
+      "prompt": "---\n## Q3: 블록 해제 및 메모리 재사용 시뮬레이션\n\n시퀀스 생성이 완료되면 블록을 반납하고 다른 시퀀스에 재할당하는 과정을 구현하세요.\n\n**요구사항:**\n- `free_sequence(seq_id)`: `block_table[seq_id]`의 모든 블록을 `free_blocks`에 반환하고 딕셔너리에서 제거\n- 시퀀스 0을 해제한 후 새로운 시퀀스 2에 4개 블록을 할당하세요.\n- 재활용된 블록 인덱스를 출력하고, 시퀀스 0이 사용하던 블록이 재사용됐는지 확인하세요.",
+      "answer_code": "def free_sequence(seq_id):\n    if seq_id not in block_table:\n        print(f\"시퀀스 {seq_id}가 존재하지 않습니다.\")\n        return\n    released = block_table.pop(seq_id)\n    free_blocks.update(released)\n    print(f\"시퀀스 {seq_id} 해제: 블록 {released} 반환\")\n\nprint(\"=== 시퀀스 0 해제 ===\")\nprev_blocks_0 = set(block_table[0])\nfree_sequence(seq_id=0)\nprint(f\"현재 free_blocks: {sorted(free_blocks)}\")\n\nprint(\"\\n=== 시퀀스 2에 4개 블록 할당 ===\")\nfor _ in range(4): allocate_block(seq_id=2)\n\nnew_blocks_2 = set(block_table[2])\nreused = prev_blocks_0 & new_blocks_2\nprint(f\"\\n시퀀스 0이 사용하던 블록: {sorted(prev_blocks_0)}\")\nprint(f\"시퀀스 2에 할당된 블록: {sorted(new_blocks_2)}\")\nprint(f\"재활용된 블록: {sorted(reused)} ({'재활용 성공!' if reused else '재활용 없음'})\")"
+    }
+  ]
+}

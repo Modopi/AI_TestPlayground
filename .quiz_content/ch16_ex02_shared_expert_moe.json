@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter16_sparse_attention/practice/ex02_shared_expert_moe.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: Shared Expert + Routed Expert 구조 정의\n\nShared Expert MoE 구조를 정의하세요. Shared Expert는 모든 토큰에 항상 적용되고, Routed Expert는 Router에 의해 선택적으로 적용됩니다.\n\n**요구사항:**\n- `d_model=256`, `d_ff=512`, `num_routed=4` 설정\n- `shared_expert`: `Dense(d_ff, relu) → Dense(d_model)` 레이어\n- `routed_experts`: `num_routed`개의 동일 구조 Expert 리스트\n- `router`: `Dense(num_routed)` 레이어\n- 각 컴포넌트의 파라미터 수를 출력하세요.",
+      "answer_code": "import tensorflow as tf\n\nd_model, d_ff, num_routed = 256, 512, 4\n\nshared_expert = tf.keras.Sequential([\n    tf.keras.layers.Dense(d_ff, activation='relu'),\n    tf.keras.layers.Dense(d_model)\n], name='shared_expert')\n\nrouted_experts = [\n    tf.keras.Sequential([\n        tf.keras.layers.Dense(d_ff, activation='relu'),\n        tf.keras.layers.Dense(d_model)\n    ]) for _ in range(num_routed)\n]\nrouter = tf.keras.layers.Dense(num_routed)\n\n# Build\nx_dummy = tf.random.normal([1, 1, d_model])\n_ = shared_expert(x_dummy)\nfor e in routed_experts: _ = e(x_dummy)\n_ = router(x_dummy)\n\nprint(f\"Shared Expert params: {shared_expert.count_params():,}\")\nprint(f\"Routed Experts params: {sum(e.count_params() for e in routed_experts):,}\")\nprint(f\"Router params: {router.count_params():,}\")"
+    },
+    {
+      "prompt": "---\n## Q2: Top-2 라우팅 및 Shared+Routed 합산\n\n전체 Shared Expert MoE 순전파를 구현하세요.\n\n**요구사항:**\n- `shared_out = shared_expert(x)`\n- `scores = softmax(router(x))` → `top_k(k=2)` 로 Top-2 선택 및 재정규화\n- Top-2 Expert 출력을 가중합하여 `routed_out` 계산\n- `final_out = shared_out + routed_out`\n- `x = tf.random.normal([2, 10, 256])`으로 테스트하세요.",
+      "answer_code": "import tensorflow as tf\n\nx = tf.random.normal([2, 10, d_model])\ntop_k = 2\n\nshared_out = shared_expert(x)\nscores = tf.nn.softmax(router(x), axis=-1)\ntop_vals, top_idx = tf.math.top_k(scores, k=top_k)\ntop_weights = top_vals / tf.reduce_sum(top_vals, axis=-1, keepdims=True)\n\nall_expert_out = tf.stack([e(x) for e in routed_experts], axis=2)  # (B,T,E,D)\none_hot = tf.one_hot(top_idx, num_routed)  # (B,T,K,E)\nrouted_out = tf.zeros_like(x)\nfor k in range(top_k):\n    mask = one_hot[:, :, k, :]\n    sel = tf.reduce_sum(all_expert_out * mask[:,:,:,tf.newaxis], axis=2)\n    routed_out = routed_out + top_weights[:, :, k:k+1] * sel\n\nfinal_out = shared_out + routed_out\nprint(f\"출력 shape: {final_out.shape}\")"
+    },
+    {
+      "prompt": "---\n## Q3: Expert 선택 분포 시각화\n\nRouter가 각 Expert를 몇 번이나 선택했는지 분포를 시각화하고, 균등 분배 기준과 비교하세요.\n\n**요구사항:**\n- `top_idx` (B,T,K) 텐서에서 전체 선택 횟수를 Expert별로 집계하세요.\n- 막대 그래프로 시각화하고, 균등 분배 기준선(`B*T*K / num_routed`)을 빨간 점선으로 표시하세요.",
+      "answer_code": "import matplotlib.pyplot as plt\nimport numpy as np\n\ncounts = np.zeros(num_routed)\nfor idx in top_idx.numpy().reshape(-1):\n    counts[idx] += 1\n\nexpected = len(top_idx.numpy().reshape(-1)) / num_routed\nplt.figure(figsize=(6, 3))\nplt.bar([f'E{i}' for i in range(num_routed)], counts, color='steelblue')\nplt.axhline(expected, color='red', linestyle='--', label=f'균등 기준 ({expected:.0f})')\nplt.title('Routed Expert 선택 분포')\nplt.ylabel('선택 횟수'); plt.legend()\nplt.tight_layout(); plt.show()"
+    }
+  ]
+}

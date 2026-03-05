@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter06_nlp/practice/ex01_sentiment_analysis.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: IMDB 데이터셋 로드 및 토크나이징\n\n`tf.keras.datasets.imdb`로 IMDB 영화 리뷰 데이터를 로드하고, 패딩을 적용하여 동일한 길이의 시퀀스로 정리하세요.\n\n**요구사항:**\n- `load_data(num_words=10000)`으로 어휘 10,000개 제한 데이터를 로드하세요.\n- `tf.keras.preprocessing.sequence.pad_sequences`로 최대 길이 256으로 패딩(post 방식)하세요.\n- 훈련/테스트 데이터의 shape과 레이블 분포를 출력하세요.",
+    "---\n## Q2: 임베딩 + LSTM 모델 구성\n\n단어 임베딩과 LSTM을 조합한 감성 분석 모델을 Sequential API로 구축하세요.\n\n**요구사항:**\n- `Embedding(input_dim=10000, output_dim=64)` 레이어로 단어를 밀집 벡터로 변환하세요.\n- `Bidirectional(LSTM(64))` 레이어로 양방향 문맥을 학습하게 하세요.\n- `Dense(64, relu) → Dropout(0.5) → Dense(1, sigmoid)` 구조로 출력층을 구성하세요.",
+    "---\n## Q3: 학습 및 정확도 평가\n\nQ2에서 구성한 모델을 컴파일하고 학습한 후, 테스트셋으로 성능을 평가하세요.\n\n**요구사항:**\n- `binary_crossentropy` 손실, `Adam(lr=1e-3)`, `accuracy` 메트릭으로 컴파일하세요.\n- 배치 사이즈 128, 에포크 10으로 학습하고 검증 데이터를 따로 분리(`validation_split=0.2`)하세요.\n- `model.evaluate(x_test, y_test)`로 최종 테스트 정확도를 출력하세요.",
+    "---\n## Q4: 예측 시각화 및 오분류 예시 확인\n\n모델이 틀린 리뷰들을 찾아서 왜 오분류했는지 분석해 보세요.\n\n**요구사항:**\n- 테스트셋 전체에 대해 예측 확률을 구하고, 예측과 실제 레이블이 다른 샘플(오분류)을 추출하세요.\n- 인덱스를 역변환하여 실제 리뷰 텍스트로 복원한 뒤 오분류된 리뷰 5개를 출력하세요."
+  ]
+}

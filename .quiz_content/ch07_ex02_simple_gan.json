@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter07_advanced_architectures/practice/ex02_simple_gan.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 데이터 준비 (MNIST)\n\nGAN 학습에 사용할 MNIST 숫자 이미지를 로드하고 정규화하세요.\n\n**요구사항:**\n- `tf.keras.datasets.mnist.load_data()`로 데이터를 로드하고 훈련 데이터만 사용하세요.\n- 픽셀값을 `[-1, 1]` 범위로 정규화하세요(Tanh 활성화에 맞게).\n- 이미지를 `(28, 28, 1)` 형태로 reshape하세요.\n- `tf.data.Dataset`으로 shuffle(60000), batch(256)를 적용하세요.",
+    "---\n## Q2: 생성기(Generator) 구현\n\n잠재 벡터(latent vector)에서 MNIST 이미지를 생성하는 Generator를 구현하세요.\n\n**요구사항:**\n- 100차원 노이즈 벡터를 입력으로 받으세요.\n- `Dense(7*7*256) → Reshape(7, 7, 256) → BatchNorm → Conv2DTranspose(128, 5, p='same') → ...`과 같이 업샘플링하세요.\n- 최종 출력은 `(28, 28, 1)` 형태이며 활성화 함수는 `tanh`를 사용하세요.",
+    "---\n## Q3: 판별기(Discriminator) 구현\n\n실제 이미지와 생성된 이미지를 분류하는 Discriminator를 구현하세요.\n\n**요구사항:**\n- `(28, 28, 1)` 이미지를 입력으로 받는 Conv2D 기반 분류기를 구성하세요.\n- `Conv2D → LeakyReLU(0.2) → Dropout(0.3)` 블록을 2~3회 반복하세요.\n- 최종 Dense(1) 레이어로 이진 분류(진짜/가짜)를 출력하세요.",
+    "---\n## Q4: GAN 학습 루프 구현\n\n`tf.GradientTape`을 사용하여 Generator와 Discriminator를 교대로 학습하는 커스텀 학습 루프를 직접 작성하세요.\n\n**요구사항:**\n- `train_step(real_images)` 함수를 작성하세요.\n- Discriminator 학습: 실제 이미지는 1, 생성 이미지는 0을 목표로 손실을 계산하세요.\n- Generator 학습: 생성 이미지가 Discriminator를 속여 1을 출력하도록 손실을 계산하세요.\n- 50 에포크 학습 후 생성된 이미지 16개를 4×4 그리드로 시각화하세요."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "target_file": "chapter07_advanced_architectures/practice/ex01_transformer_text_classification.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 데이터 준비\n\nIMDB 데이터셋을 로드하고 트랜스포머 입력에 맞게 전처리하세요.\n\n**요구사항:**\n- 어휘 크기 `VOCAB_SIZE=20000`, 시퀀스 길이 `MAX_LEN=200`으로 설정하세요.\n- `TextVectorization` 레이어로 어휘집을 구축하고 정수 시퀀스로 변환하세요.\n- `tf.data.Dataset`을 구성하고 `.batch(64).prefetch(tf.data.AUTOTUNE)`을 적용하세요.",
+    "---\n## Q2: Multi-Head Attention 레이어 구현\n\n`tf.keras.layers.Layer`를 상속하여 Multi-Head Self-Attention 레이어를 직접 구현하세요.\n\n**요구사항:**\n- `__init__`에서 헤드 수(`num_heads`)와 키 차원(`key_dim`)을 인자로 받으세요.\n- `call()` 안에서 `tf.keras.layers.MultiHeadAttention`을 사용하여 Query/Key/Value를 동일 입력으로 전달하는 Self-Attention을 계산하세요.\n- Dropout과 잔차 연결(Add), LayerNormalization을 포함하세요.",
+    "---\n## Q3: Transformer 인코더 블록 조립\n\nQ2의 Multi-Head Attention에 Feed-Forward Network를 붙여 완전한 트랜스포머 인코더 블록을 구성하세요.\n\n**요구사항:**\n- `TransformerBlock(Layer)` 클래스를 정의하고 `__init__`에서 `embed_dim`, `num_heads`, `ff_dim`을 받으세요.\n- FFN: `Dense(ff_dim, relu) → Dense(embed_dim)` + 잔차 연결 + LayerNormalization\n- 블록을 2회 쌓아 분류 헤드(`GlobalAveragePooling1D → Dense(1, sigmoid)`)와 연결하세요.",
+    "---\n## Q4: 학습 및 Attention Map 시각화\n\n트랜스포머 모델을 학습하고, 특정 리뷰에 대해 Attention 가중치가 어느 단어에 집중되는지 시각화하세요.\n\n**요구사항:**\n- `Adam(lr=1e-4)`, `binary_crossentropy`로 컴파일하고 10 에포크 학습하세요.\n- `tf.keras.Model`을 사용해 Attention 가중치를 추출하는 서브모델을 만드세요.\n- 테스트 리뷰 1개에 대해 Attention 가중치를 Heatmap으로 시각화하세요."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter13_genai_diffusion/practice/ex01_ddpm_forward_reverse.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: Beta 스케줄 정의\n\nDDPM의 Noise Schedule을 구현하세요. t=1부터 T=1000까지 선형으로 증가하는 Beta 값을 정의하고 파생 변수들을 계산하세요.\n\n**요구사항:**\n- `T=1000`, `beta_start=1e-4`, `beta_end=0.02`로 선형 스케줄 `beta[t]`를 생성하세요.\n- `alpha[t] = 1 - beta[t]`, `alpha_bar[t] = prod(alpha[0:t+1])` (누적곱)를 계산하세요.\n- `alpha_bar`를 그래프로 그려 t가 증가할수록 0에 수렴하는 것을 시각화하세요.",
+      "answer_code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nT = 1000\nbeta = np.linspace(1e-4, 0.02, T, dtype=np.float32)\nalpha = 1.0 - beta\nalpha_bar = np.cumprod(alpha)\n\nprint(f\"beta[0]={beta[0]:.5f}, beta[-1]={beta[-1]:.5f}\")\nprint(f\"alpha_bar[0]={alpha_bar[0]:.4f}, alpha_bar[-1]={alpha_bar[-1]:.6f}\")\n\nplt.figure(figsize=(8, 3))\nplt.plot(alpha_bar, color='steelblue')\nplt.xlabel('Timestep t'); plt.ylabel('ᾱ(t)')\nplt.title('DDPM: Cumulative Alpha_bar vs Timestep')\nplt.grid(True, alpha=0.3)\nplt.tight_layout()\nplt.show()"
+    },
+    {
+      "prompt": "---\n## Q2: Forward Process (노이즈 추가)\n\nDDPM의 Forward Process q(x_t | x_0)를 구현하세요. 임의의 타임스텝 t에서 한 번에 노이즈를 추가할 수 있습니다.\n\n**요구사항:**\n- `def q_sample(x_0, t, alpha_bar)` 함수를 작성하세요.\n- 공식: `x_t = sqrt(alpha_bar[t]) * x_0 + sqrt(1 - alpha_bar[t]) * noise`\n- `noise = np.random.randn(*x_0.shape)`을 사용하세요.\n- 샘플 이미지를 `t=0, 250, 500, 750, 999` 단계별로 노이즈를 추가하고 5단계를 나란히 시각화하세요.",
+      "answer_code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef q_sample(x_0, t, alpha_bar):\n    noise = np.random.randn(*x_0.shape)\n    ab = alpha_bar[t]\n    return np.sqrt(ab) * x_0 + np.sqrt(1 - ab) * noise, noise\n\n# 가상 이미지 (28x28 MNIST 모사)\nnp.random.seed(42)\nx_0 = np.random.randn(28, 28).astype(np.float32)\ntimesteps = [0, 250, 500, 750, 999]\n\nfig, axes = plt.subplots(1, 5, figsize=(14, 3))\nfor ax, t in zip(axes, timesteps):\n    x_t, _ = q_sample(x_0, t, alpha_bar)\n    ax.imshow(x_t, cmap='gray', vmin=-3, vmax=3)\n    ax.set_title(f't={t}\\nᾱ={alpha_bar[t]:.3f}')\n    ax.axis('off')\nplt.suptitle('DDPM Forward Process: 점진적 노이즈 추가')\nplt.tight_layout()\nplt.show()"
+    },
+    {
+      "prompt": "---\n## Q3: Reverse Process 1 스텝 시뮬레이션\n\nDDPM의 Reverse Process를 시뮬레이션하세요. 실제로 노이즈 예측 네트워크가 있다고 가정하고 완전 노이즈(`x_T`)에서 한 스텝씩 노이즈를 제거합니다.\n\n**요구사항:**\n- `def p_sample_step(x_t, t, noise_pred, beta, alpha_bar)` 함수를 구현하세요.\n- 공식: `x_{t-1} = (x_t - beta[t]/sqrt(1-alpha_bar[t]) * noise_pred) / sqrt(alpha[t]) + sigma[t]*z`\n- `sigma[t] = sqrt(beta[t])`, `z ~ N(0,1)` (t>0일 때)\n- 이상적인 노이즈 예측(`noise_pred = 실제 노이즈`)을 가정하고 5스텝만 디노이징하여 이미지를 시각화하세요.",
+      "answer_code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef p_sample_step(x_t, t, noise_pred, beta, alpha, alpha_bar):\n    coef = beta[t] / np.sqrt(1 - alpha_bar[t])\n    mean = (x_t - coef * noise_pred) / np.sqrt(alpha[t])\n    if t > 0:\n        z = np.random.randn(*x_t.shape)\n        return mean + np.sqrt(beta[t]) * z\n    return mean\n\nnp.random.seed(0)\nx_0 = np.random.randn(28, 28).astype(np.float32)\nT_start = 999\n\n# Forward (진짜 노이즈 저장)\nx_T, true_noise = q_sample(x_0, T_start, alpha_bar)\n\n# Reverse 5 스텝만 (999→998→...→995)\nresults = [(T_start, x_T.copy())]\nx_cur = x_T.copy()\nfor t in range(T_start, T_start-5, -1):\n    x_cur = p_sample_step(x_cur, t, true_noise, beta, alpha, alpha_bar)\n    results.append((t-1, x_cur.copy()))\n\nfig, axes = plt.subplots(1, len(results), figsize=(14, 3))\nfor ax, (t, img) in zip(axes, results):\n    ax.imshow(img, cmap='gray', vmin=-3, vmax=3)\n    ax.set_title(f't={t}')\n    ax.axis('off')\nplt.suptitle('DDPM Reverse Process (첫 5스텝)')\nplt.tight_layout()\nplt.show()"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter13_genai_diffusion/practice/ex02_implement_cfg_generation.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: Classifier-Free Guidance 핵심 공식 구현\n\nCFG(Classifier-Free Guidance)는 `guidance_scale`을 사용해 레이블 조건부 생성의 강도를 조절합니다. 핵심 공식을 구현하세요.\n\n**요구사항:**\n- `def cfg_score(noise_cond, noise_uncond, guidance_scale)` 함수를 작성하세요.\n- 공식: `score = noise_uncond + guidance_scale * (noise_cond - noise_uncond)`\n- `guidance_scale = 1.0, 3.0, 7.5, 15.0` 값 각각에 대해, 랜덤 조건부/무조건부 score 입력으로 혼합 결과를 계산하고, `guidance_scale`이 증가할수록 조건부 신호가 증폭되는 것을 확인하세요.",
+      "answer_code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef cfg_score(noise_cond, noise_uncond, guidance_scale):\n    return noise_uncond + guidance_scale * (noise_cond - noise_uncond)\n\nnp.random.seed(42)\nnoise_cond   = np.array([1.0, 0.5, -0.3])  # 조건부 노이즈 예측\nnoise_uncond = np.array([0.2, 0.1, -0.05]) # 무조건부 노이즈 예측\n\nscales = [1.0, 3.0, 7.5, 15.0]\nprint(f\"{'guidance_scale':>16} | {'score':>30}\")\nprint('-' * 50)\nfor s in scales:\n    score = cfg_score(noise_cond, noise_uncond, s)\n    print(f\"{s:>16.1f} | {np.round(score, 3)}\")"
+    },
+    {
+      "prompt": "---\n## Q2: Double Forward Pass 구조 시뮬레이션\n\nCFG는 동일한 노이즈 이미지로 조건부/무조건부 예측을 동시에 수행합니다. 이 Double Forward Pass 구조를 시뮬레이션하세요.\n\n**요구사항:**\n- 가짜 U-Net 함수 `fake_unet(x_t, label)` 정의: label이 -1이면 무조건부, 그 외는 조건부 (label에 따라 다른 노이즈를 반환)\n- `x_t = np.random.randn(1, 28, 28)`, 클래스 레이블 `c = 3`으로 설정\n- 조건부(`c`)와 무조건부(`-1`) 예측을 각각 수행하고, `cfg_score()`로 합산하세요.\n- 각 값을 출력하여 guidance_scale=7.5 적용 결과를 확인하세요.",
+      "answer_code": "import numpy as np\n\nnp.random.seed(0)\n\ndef fake_unet(x_t, label):\n    \"\"\"가짜 노이즈 예측 네트워크 (label=-1이면 무조건부)\"\"\"\n    base = np.random.randn(*x_t.shape) * 0.1\n    if label >= 0:\n        return base + label * 0.05  # 조건부: label 신호 추가\n    return base  # 무조건부\n\nx_t = np.random.randn(1, 28, 28).astype(np.float32)\nc = 3\nguidance_scale = 7.5\n\nnoise_cond   = fake_unet(x_t, label=c)    # 조건부 forward\nnoise_uncond = fake_unet(x_t, label=-1)   # 무조건부 forward\n\ncfg_out = noise_uncond + guidance_scale * (noise_cond - noise_uncond)\n\nprint(f\"noise_cond  mean:  {noise_cond.mean():.4f}\")\nprint(f\"noise_uncond mean: {noise_uncond.mean():.4f}\")\nprint(f\"CFG output mean (scale={guidance_scale}): {cfg_out.mean():.4f}\")\nprint(f\"조건부 신호 증폭 비율: {cfg_out.mean()/noise_cond.mean():.2f}x\")"
+    },
+    {
+      "prompt": "---\n## Q3: Guidance Scale별 생성 다양성 시각화\n\n`guidance_scale`이 낮을수록 다양성이 높고, 높을수록 클래스 충실도가 높아집니다. 이 Trade-off를 시뮬레이션하세요.\n\n**요구사항:**\n- `guidance_scale = [1.0, 3.0, 7.5, 15.0, 30.0]` 각각에 대해 10번 샘플링하세요.\n- 각 scale에서 생성된 이미지(노이즈 벡터)의 분산(variance)을 계산하세요 (분산이 클수록 다양성 높음).\n- guidance_scale vs 분산의 관계를 막대 그래프로 시각화하고 Trade-off를 확인하세요.",
+      "answer_code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nnp.random.seed(42)\nscales = [1.0, 3.0, 7.5, 15.0, 30.0]\nvariances = []\n\nfor scale in scales:\n    samples = []\n    for _ in range(10):\n        noise_c = np.random.randn(64) * (1.0 + 0.1 * scale)  # scale에 따른 단순 모사\n        noise_u = np.random.randn(64) * 0.5\n        out = noise_u + scale * (noise_c - noise_u)\n        samples.append(out)\n    variances.append(np.var(samples))\n\nplt.figure(figsize=(8, 4))\nplt.bar([str(s) for s in scales], variances, color='coral')\nplt.xlabel('Guidance Scale'); plt.ylabel('샘플 분산 (다양성)')\nplt.title('CFG: Guidance Scale vs 생성 다양성 Trade-off')\nplt.grid(True, alpha=0.3, axis='y')\nplt.tight_layout()\nplt.show()\nprint(\"\\n높은 guidance_scale → 낮은 다양성, 높은 클래스 충실도\")"
+    }
+  ]
+}

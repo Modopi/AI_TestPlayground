@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter17_diffusion_transformers/practice/ex01_spatiotemporal_patcher.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: 3D 텐서 패치 분할\n\n비디오 DiT에서 입력 비디오를 시공간 패치 시퀀스로 변환하는 과정을 구현하세요.\n\n**요구사항:**\n- 입력 비디오 텐서 `x = (B=2, T=8, H=32, W=32, C=3)` (배치, 프레임, 높이, 너비, 채널) 생성\n- 패치 크기: `pt=2` (시간), `ph=ph=4` (공간)\n- 각 패치를 1D 벡터로 flatten하고, 전체 패치 수와 각 패치의 차원 수를 계산하세요.\n- `tf.reshape`로 `(B, num_patches, patch_dim)` 형태의 패치 시퀀스를 만드세요.",
+      "answer_code": "import tensorflow as tf\nimport numpy as np\n\nB, T, H, W, C = 2, 8, 32, 32, 3\npt, ph, pw = 2, 4, 4  # 패치 크기\n\nx = tf.random.normal([B, T, H, W, C])\n\n# 패치 수 계산\nnt = T // pt  # 시간 패치 수\nnh = H // ph  # 높이 패치 수\nnw = W // pw  # 너비 패치 수\nnum_patches = nt * nh * nw\npatch_dim = pt * ph * pw * C\n\nprint(f\"비디오 shape: {x.shape}\")\nprint(f\"패치 수: {nt} x {nh} x {nw} = {num_patches}\")\nprint(f\"패치 차원: {pt}x{ph}x{pw}x{C} = {patch_dim}\")\n\n# Reshape to patches\nx_reshaped = tf.reshape(x, [B, nt, pt, nh, ph, nw, pw, C])\nx_transposed = tf.transpose(x_reshaped, [0, 1, 3, 5, 2, 4, 6, 7])\npatches = tf.reshape(x_transposed, [B, num_patches, patch_dim])\nprint(f\"패치 시퀀스 shape: {patches.shape}\")"
+    },
+    {
+      "prompt": "---\n## Q2: 시공간 포지셔널 인코딩 추가\n\n각 패치의 시간/공간 위치 정보를 담은 포지셔널 임베딩을 생성하여 패치 시퀀스에 추가하세요.\n\n**요구사항:**\n- 3D (temporal, height, width) Learnable Positional Embedding을 `tf.Variable`로 정의하세요.\n- shape: `(nt*nh*nw, d_model)` 또는 `(nt, nh, nw, d_model)` 후 flatten\n- `d_model = 512` 설정\n- 패치 시퀀스 `patches`를 projection하여 `d_model` 차원으로 매핑 후, 포지셔널 임베딩을 더하세요.",
+      "answer_code": "import tensorflow as tf\n\nd_model = 512\npatch_proj = tf.keras.layers.Dense(d_model)\n\n# 패치를 d_model 차원으로 프로젝션\ntoken_embeds = patch_proj(patches)  # (B, num_patches, d_model)\n\n# Learnable 시공간 포지셔널 임베딩\npos_embed = tf.Variable(\n    tf.random.normal([1, num_patches, d_model], stddev=0.02),\n    trainable=True, name='pos_embed'\n)\n\n# 포지셔널 인코딩 추가\ntoken_embeds = token_embeds + pos_embed  # Broadcasting over batch\n\nprint(f\"패치 임베딩 shape: {token_embeds.shape}\")\nprint(f\"Positional Embedding shape: {pos_embed.shape}\")\nprint(f\"총 토큰 수: {num_patches}\")"
+    },
+    {
+      "prompt": "---\n## Q3: 패치 시퀀스 → 원본 비디오 복원\n\n패치 시퀀스를 다시 원본 비디오 형태로 복원(unpatch)하는 역변환 함수를 작성하세요.\n\n**요구사항:**\n- `unpatch(token_embeds, d_model, nt, nh, nw, pt, ph, pw, C)` 함수를 작성하세요.\n- 먼저 `Dense(patch_dim)` 레이어로 출력 채널 수를 맞추세요.\n- `reshape`와 `transpose`를 역순으로 적용하여 `(B, T, H, W, C)` 형태로 복원하세요.\n- 복원된 shape이 원본과 동일한지 확인하세요.",
+      "answer_code": "import tensorflow as tf\n\ndef unpatch(tokens, d_model, nt, nh, nw, pt, ph, pw, C):\n    \"\"\"(B, num_patches, d_model) → (B, T, H, W, C)\"\"\"\n    B = tf.shape(tokens)[0]\n    patch_dim = pt * ph * pw * C\n    # Output projection to patch_dim\n    proj = tf.keras.layers.Dense(patch_dim)(tokens)  # (B, N, patch_dim)\n    # Reshape\n    x = tf.reshape(proj, [B, nt, nh, nw, pt, ph, pw, C])\n    # Transpose back: [B, nt, pt, nh, ph, nw, pw, C]\n    x = tf.transpose(x, [0, 1, 4, 2, 5, 3, 6, 7])\n    x = tf.reshape(x, [B, nt*pt, nh*ph, nw*pw, C])\n    return x\n\nreconstructed = unpatch(token_embeds, d_model, nt, nh, nw, pt, ph, pw, C)\nprint(f\"원본 비디오 shape: {x.shape}\")\nprint(f\"복원 비디오 shape: {reconstructed.shape}\")\nprint(f\"복원 성공: {x.shape == reconstructed.shape}\")"
+    }
+  ]
+}

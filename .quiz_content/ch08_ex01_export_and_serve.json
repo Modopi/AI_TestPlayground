@@ -1,0 +1,9 @@
+{
+  "target_file": "chapter08_production/practice/ex01_export_and_serve.ipynb",
+  "mode": "insert_prompts",
+  "prompts": [
+    "---\n## Q1: 모델 훈련 및 SavedModel 형식으로 저장\n\n간단한 MNIST 분류 모델을 학습한 후, TensorFlow SavedModel 형식으로 저장하세요.\n\n**요구사항:**\n- MNIST 데이터로 간단한 Sequential 모델을 5 에포크 학습하세요.\n- `model.save('saved_model/mnist_v1')` 형식으로 SavedModel을 저장하세요.\n- `tf.saved_model.load()`로 다시 불러와 predict가 작동하는지 확인하세요.",
+    "---\n## Q2: TensorFlow Lite 변환 및 추론\n\n저장된 모델을 TensorFlow Lite 형식으로 변환하고, TFLite 인터프리터로 추론을 수행하세요.\n\n**요구사항:**\n- `tf.lite.TFLiteConverter.from_saved_model()`로 TFLite 모델을 생성하세요.\n- Float16 양자화를 적용하고 `.tflite` 파일로 저장하세요.\n- `tf.lite.Interpreter`로 로드하고 테스트 이미지 1장에 대해 추론을 실행하세요.",
+    "---\n## Q3: REST API 호환 형식으로 서명(Signature) 정의\n\nTensorFlow Serving에서 사용할 수 있도록 `tf.function`과 `SavedModel Signature`를 명시적으로 정의하세요.\n\n**요구사항:**\n- `@tf.function(input_signature=[tf.TensorSpec(shape=[None, 784], dtype=tf.float32, name='inputs')])` 데코레이터로 서빙 함수를 정의하세요.\n- `tf.saved_model.save(model, 'saved_model/mnist_v2', signatures={'serving_default': serve_fn})`으로 저장하세요.\n- `saved_model_cli show --dir saved_model/mnist_v2 --all` 명령어로 서명 정보를 출력하세요."
+  ]
+}

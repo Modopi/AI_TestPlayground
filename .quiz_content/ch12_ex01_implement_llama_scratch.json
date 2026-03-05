@@ -1,0 +1,18 @@
+{
+  "target_file": "chapter12_modern_llms/practice/ex01_implement_llama_scratch.ipynb",
+  "mode": "add_questions",
+  "questions": [
+    {
+      "prompt": "---\n## Q1: RMSNorm 구현\n\nLLaMA에서 LayerNorm 대신 사용하는 RMSNorm을 직접 구현하세요.\n\n**요구사항:**\n- `class RMSNorm(tf.keras.layers.Layer)`를 정의하세요.\n- `build()`에서 스케일 파라미터 `gamma`를 (hidden_dim,) 형태로 초기화하세요.\n- `call()`: `rms = sqrt(mean(x^2) + eps)` → `x / rms * gamma`\n- `x = tf.random.normal([2, 10, 512])`에 적용하고 출력 shape을 확인하세요.",
+      "answer_code": "import tensorflow as tf\n\nclass RMSNorm(tf.keras.layers.Layer):\n    def __init__(self, eps=1e-6, **kwargs):\n        super().__init__(**kwargs)\n        self.eps = eps\n\n    def build(self, input_shape):\n        self.gamma = self.add_weight(\n            name='gamma', shape=(input_shape[-1],),\n            initializer='ones', trainable=True\n        )\n        super().build(input_shape)\n\n    def call(self, x):\n        rms = tf.sqrt(tf.reduce_mean(tf.square(x), axis=-1, keepdims=True) + self.eps)\n        return self.gamma * (x / rms)\n\nrms_norm = RMSNorm()\nx = tf.random.normal([2, 10, 512])\nout = rms_norm(x)\nprint(f\"입력: {x.shape} → 출력: {out.shape}\")"
+    },
+    {
+      "prompt": "---\n## Q2: RoPE (Rotary Positional Encoding) 구현\n\nLLaMA에서 사용하는 Rotary Positional Encoding을 구현하세요.\n\n**요구사항:**\n- `precompute_rope_freqs(dim, max_seq_len, theta=10000.0)` 함수: 주파수 행렬 `(max_seq_len, dim/2)` 반환\n- `apply_rope(x, freqs)` 함수: `x (batch, seq, head_dim)`에 회전 적용\n- 공식: `[x1*cos - x2*sin, x1*sin + x2*cos]`로 짝수/홀수 차원을 회전\n- `x = tf.random.normal([2, 16, 64])`에 적용 후 shape 확인",
+      "answer_code": "import tensorflow as tf\nimport numpy as np\n\ndef precompute_rope_freqs(dim, max_seq_len, theta=10000.0):\n    i = np.arange(0, dim, 2, dtype=np.float32)\n    freq = 1.0 / (theta ** (i / dim))\n    positions = np.arange(max_seq_len, dtype=np.float32)\n    return tf.constant(np.outer(positions, freq), dtype=tf.float32)\n\ndef apply_rope(x, freqs):\n    seq_len = tf.shape(x)[1]\n    f = freqs[:seq_len][tf.newaxis]\n    x1, x2 = x[..., 0::2], x[..., 1::2]\n    out = tf.stack([x1*tf.cos(f) - x2*tf.sin(f),\n                    x1*tf.sin(f) + x2*tf.cos(f)], axis=-1)\n    return tf.reshape(out, tf.shape(x))\n\nfreqs = precompute_rope_freqs(64, 512)\nx = tf.random.normal([2, 16, 64])\nprint(f\"RoPE 출력 shape: {apply_rope(x, freqs).shape}\")"
+    },
+    {
+      "prompt": "---\n## Q3: SwiGLU Feed-Forward Network 구현\n\nLLaMA의 FFN인 SwiGLU를 구현하세요.\n\n**요구사항:**\n- `class SwiGLU_FFN(tf.keras.layers.Layer)` 정의\n- `gate_proj`, `up_proj` (d_model→d_ff), `down_proj` (d_ff→d_model)\n- `call()`: `SiLU(gate_proj(x)) * up_proj(x)` → `down_proj()`\n- `SiLU(x) = x * sigmoid(x)` (`tf.nn.silu` 사용)\n- `x = tf.random.normal([2, 10, 512])`로 테스트하세요.",
+      "answer_code": "import tensorflow as tf\n\nclass SwiGLU_FFN(tf.keras.layers.Layer):\n    def __init__(self, d_model, d_ff, **kwargs):\n        super().__init__(**kwargs)\n        self.gate_proj = tf.keras.layers.Dense(d_ff, use_bias=False)\n        self.up_proj   = tf.keras.layers.Dense(d_ff, use_bias=False)\n        self.down_proj = tf.keras.layers.Dense(d_model, use_bias=False)\n\n    def call(self, x):\n        return self.down_proj(tf.nn.silu(self.gate_proj(x)) * self.up_proj(x))\n\nffn = SwiGLU_FFN(d_model=512, d_ff=1376)\nx = tf.random.normal([2, 10, 512])\nout = ffn(x)\nprint(f\"입력: {x.shape} → 출력: {out.shape}, 파라미터: {ffn.count_params():,}\")"
+    }
+  ]
+}
